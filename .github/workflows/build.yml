@@ -1,0 +1,32 @@
+name: build
+
+on:
+  push:
+    branches:
+      - 'main'
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      -
+        name: Build and push nginx
+        uses: docker/build-push-action@v5
+        with:
+          file: ./Dockerfile.nginx
+          push: true
+          tags: ghcr.io/ufal/dockerized-nginx-with-shibboleth/nginx-shib:latest
+      -
+        name: Build and push shibboleth
+        uses: docker/build-push-action@v5
+        with:
+            file: ./Dockerfile.shibboleth
+            push: true
+            tags: ghcr.io/ufal/dockerized-nginx-with-shibboleth/shibboleth:latest
