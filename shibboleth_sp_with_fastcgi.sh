@@ -2,7 +2,7 @@
 # https://github.com/ufal/lindat-dspace/wiki/Building-Shibboleth-with-FastCGI-support
 # ensure the versions are still latest
 
-sudo apt-get install libfcgi-dev libboost-all-dev openssl libssl-dev pkg-config libcurl4-openssl-dev
+apt-get install libfcgi-dev libboost-all-dev openssl libssl-dev pkg-config libcurl4-openssl-dev
 
 INSTALLDIR=/opt/shibboleth-sp
 
@@ -36,7 +36,7 @@ function compile {
     cd $dirname && \
     ./configure $config && \
     make && \
-    sudo make install && \
+    make install && \
     cd ..
 }
 
