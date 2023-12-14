@@ -1,13 +1,11 @@
 FROM debian:bookworm-slim
 
+COPY shibboleth_sp_with_fastcgi.sh /shibboleth_sp_with_fastcgi.sh
+
 RUN <<EOF
 apt-get update
 apt-get install -y wget build-essential libfcgi-dev libboost-all-dev openssl libssl-dev pkg-config libcurl4-openssl-dev
-rm -rf /var/lib/apt/lists/*
-wget -q https://gist.githubusercontent.com/kosarko/6cc43935304f2d6a86b9/raw/d80fd778345787603990e5c139299c733004c1c3/shibboleth_sp_with_fastcgi.sh
-sed -i 's/sudo //g' shibboleth_sp_with_fastcgi.sh
-chmod +x shibboleth_sp_with_fastcgi.sh
-./shibboleth_sp_with_fastcgi.sh
+bash ./shibboleth_sp_with_fastcgi.sh
 EOF
 
 FROM debian:bookworm-slim
