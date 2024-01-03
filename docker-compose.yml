@@ -8,7 +8,7 @@ services:
     volumes:
     # TODO logs
     # generate /ssl/dhparam.pem with openssl dhparam -out dhparam.pem 4096
-      - ./templates:/etc/nginx/templates # TODO add to conf
+      - ./templates/nginx:/etc/nginx/templates # TODO add to conf
       - ./locations:/etc/nginx/locations
       - ./ssl:/ssl
     environment:
