@@ -1,0 +1,88 @@
+ upstream tomcat {
+    keepalive 2;
+    server ${NGINX_TOMCAT};
+}
+upstream node {
+    keepalive 2;
+    server ${NGINX_NODE};
+}
+
+server {
+    listen 443 ssl;
+    server_name ${NGINX_SERVER_NAMES};
+    #limit_conn conn_per_ip 50;
+    #limit_req zone=req_per_ip burst=100 nodelay;
+
+    root  /var/www;
+    index index.html index.htm;
+
+    ssl_certificate /ssl/nginx_chain_cert.pem;
+    ssl_certificate_key /ssl/serverkey.pem;
+    resolver ${NGINX_RESOLVERS} valid=300s; # normally this would be in ssl_params, but I need a template
+    include ssl_params;
+    include cors_headers;
+
+    location = /shibauthorizer {
+        internal;
+        include fastcgi_params;
+        fastcgi_pass ${NGINX_SHIBAUTHORIZER};
+    }
+
+    location /Shibboleth.sso {
+        include fastcgi_params;
+        fastcgi_pass ${NGINX_SHIBRESOLVER};
+    }
+
+    location = /Shibboleth.sso/DiscoFeed/jsonp {
+        echo_before_body 'dj_md_1('; 
+        fastcgi_param CONTENT_LENGTH $content_length;
+        fastcgi_param CONTENT_TYPE $content_type;
+        fastcgi_param QUERY_STRING $query_string;
+        fastcgi_param REMOTE_ADDR $remote_addr;
+        fastcgi_param REMOTE_USER $remote_user;
+        fastcgi_param REQUEST_METHOD $request_method;
+        fastcgi_param REQUEST_URI '/Shibboleth.sso/DiscoFeed';
+        fastcgi_param SERVER_NAME $server_name;
+        fastcgi_param SERVER_PORT $server_port;
+        fastcgi_pass ${NGINX_SHIBRESOLVER};
+        echo_after_body ');';
+    }
+
+    location /server/ {
+        include proxy_params;
+        proxy_pass http://tomcat;
+    }
+
+    location /server/api/authn/shibboleth {
+        include shibboleth_auth;
+        include proxy_params;
+        proxy_pass http://tomcat;
+    }
+
+    location / {
+        try_files $uri @FE;
+    }
+
+    location @FE {
+        include proxy_params;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_pass http://node;
+    }
+
+    include /etc/nginx/locations/*;
+}
+
+# HTTP server a redirect
+#
+server {
+    listen 80 default_server;
+    server_name ${NGINX_SERVER_NAMES};
+    #limit_conn conn_per_ip 50;
+    #limit_req zone=req_per_ip burst=100 nodelay;
+
+    root  /var/www;
+    index index.html index.htm;
+
+    return 301 https://$http_host$request_uri;
+}

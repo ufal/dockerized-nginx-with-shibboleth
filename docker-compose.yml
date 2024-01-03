@@ -1,0 +1,34 @@
+version: '3'
+services:
+  nginx:
+    image: ghcr.io/ufal/dockerized-nginx-with-shibboleth/nginx-shib:latest
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+    # TODO logs
+    # generate /ssl/dhparam.pem with openssl dhparam -out dhparam.pem 4096
+      - ./templates:/etc/nginx/templates # TODO add to conf
+      - ./locations:/etc/nginx/locations
+      - ./ssl:/ssl
+    environment:
+      - NGINX_ENVSUBST_FILTER=NGINX_
+      - NGINX_SHIBAUTHORIZER=${NGINX_SHIBAUTHORIZER:-unix:/opt/shibboleth-sp/shibauthorizer.sock}
+      - NGINX_SHIBRESOLVER=${NGINX_SHIBRESOLVER:-unix:/opt/shibboleth-sp/shibresolver.sock}
+      - NGINX_TOMCAT
+      - NGINX_NODE
+      - NGINX_SERVER_NAMES
+      - NGINX_RESOLVERS
+    depends_on:
+      - shibboleth
+
+  shibboleth:
+    image: ghcr.io/ufal/dockerized-nginx-with-shibboleth/shibboleth:latest
+    #ports:
+      #- 12345:12345
+      #- 12344:12344
+    volumes:
+    # config (shibboleth2.xml, attribute-map.xml, key material), logs
+      - ./data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=your_password

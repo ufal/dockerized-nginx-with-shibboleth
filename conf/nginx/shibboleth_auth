@@ -1,0 +1,32 @@
+#wildcards (Shib-*) not working with headers more <0.33
+#more_clear_input_headers
+#    Auth-Type
+#    Shib-Application-Id
+#    Shib-Assertion-01
+#    Shib-Assertion-Count
+#    Shib-Authentication-Instant
+#    Shib-Authentication-Method
+#    Shib-Authncontext-Class
+#    Shib-Identity-Provider
+#    Shib-Session-Id
+#    Shib-Session-Index
+#    Remote-User; 
+
+more_clear_input_headers
+    Auth-Type
+    Shib-*
+    Remote-User; 
+
+# Add your attributes here. They get introduced as headers
+# by the FastCGI authorizer so we must prevent spoofing.
+# get these from shibboleth attributes-map.xml
+# xmllint --xpath '//@id' /opt/shibboleth-sp/etc/shibboleth/attribute-map.xml | sed -e 's/ /\n/g' -e's/id=//g' -e "s/\"/'/g" | sort -u | paste -d" " -s
+more_clear_input_headers 'affiliation' 'assurance' 'cn' 'eduPersonOrgUnitDN' 'eduPersonStudyiProgramme' 'eduPersonStudySubject' 'entitlement' 'eppn' 'givenName' 'mail' 'o' 'ou' 'persistent-id' 'sn' 'telephoneNumber' 'unscoped-affiliation';
+
+# Require https and will redirect
+if ($https != "on") {
+  return 301 https://$http_host$request_uri;
+}
+
+shib_request /shibauthorizer;
+shib_request_use_headers on;
