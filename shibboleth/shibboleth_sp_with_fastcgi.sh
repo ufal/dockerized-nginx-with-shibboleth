@@ -22,7 +22,7 @@ function get {
 }
 
 get log4shib 2.0.1 http://shibboleth.net/downloads/log4shib/latest/
-get xerces-c 3.2.4 http://mirror.hosting90.cz/apache/xerces/c/3/sources/
+get xerces-c 3.2.5 http://mirror.hosting90.cz/apache/xerces/c/3/sources/
 get xml-security-c 2.0.4 http://mirror.hosting90.cz/apache/santuario/c-library/
 get xmltooling 3.2.4 http://shibboleth.net/downloads/c++-opensaml/latest/
 get opensaml 3.2.1 http://shibboleth.net/downloads/c++-opensaml/latest/
