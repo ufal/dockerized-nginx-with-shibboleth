@@ -1,4 +1,4 @@
 .env
 *.sw[pon]
 ssl
-locations/*
+nginx/locations/*

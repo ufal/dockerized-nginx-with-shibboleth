@@ -10,6 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       -
+        # Setting up Docker Buildx with docker-container driver is required
+        # at the moment to be able to use a subdirectory with Git context
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      -
         name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -20,13 +25,13 @@ jobs:
         name: Build and push nginx
         uses: docker/build-push-action@v5
         with:
-          file: ./Dockerfile.nginx
+          context: "{{defaultContext}}:nginx"          
           push: true
           tags: ghcr.io/ufal/dockerized-nginx-with-shibboleth/nginx-shib:latest
       -
         name: Build and push shibboleth
         uses: docker/build-push-action@v5
         with:
-            file: ./Dockerfile.shibboleth
+            context: "{{defaultContext}}:shibboleth"
             push: true
             tags: ghcr.io/ufal/dockerized-nginx-with-shibboleth/shibboleth:latest
