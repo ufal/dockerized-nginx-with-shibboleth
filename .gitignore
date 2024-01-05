@@ -3,3 +3,4 @@
 ssl
 nginx/locations/*
 shibboleth/overrides/*
+sp-keys

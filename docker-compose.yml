@@ -11,7 +11,7 @@ services:
     # generate /ssl/dhparam.pem with openssl dhparam -out dhparam.pem 4096
       - ./nginx/templates:/etc/nginx/templates # TODO add to conf
       - ./nginx/locations:/etc/nginx/locations
-      - ./ssl:/ssl
+      - ./nginx/ssl:/ssl
     environment:
       - NGINX_ENVSUBST_FILTER=NGINX_
       - NGINX_SHIBAUTHORIZER=${NGINX_SHIBAUTHORIZER:-unix:/opt/shibboleth-sp/shibauthorizer.sock}
@@ -30,7 +30,8 @@ services:
       #- 12345:12345
       #- 12344:12344
     volumes:
-    # config (shibboleth2.xml, attribute-map.xml, key material), logs
+    # config (key material), logs
     - ./shibboleth/overrides:/overrides
+    - ./shibboleth/sp-keys:/sp-keys
     environment:
      - SHIB_HOSTNAME=${SHIB_HOSTNAME:?SHIB_HOSTNAME must be set}
