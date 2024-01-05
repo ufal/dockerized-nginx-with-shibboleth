@@ -29,8 +29,8 @@ services:
     #ports:
       #- 12345:12345
       #- 12344:12344
-    #volumes:
+    volumes:
     # config (shibboleth2.xml, attribute-map.xml, key material), logs
-    #- ./data:/var/lib/mysql
-    #environment:
-    # - MYSQL_ROOT_PASSWORD=your_password
+    - ./shibboleth/overrides:/overrides
+    environment:
+     - SHIB_HOSTNAME=${SHIB_HOSTNAME:?SHIB_HOSTNAME must be set}

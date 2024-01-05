@@ -1,0 +1,8 @@
+<RequestMap xmlns="urn:mace:shibboleth:3.0:native:sp:config">
+    <Host name="${SHIB_HOSTNAME}"
+        authType="shibboleth"
+        requireSession="true"
+        exportAssertion="true"
+        redirectToSSL="443">
+    </Host>
+</RequestMap>
