@@ -14,8 +14,8 @@ services:
       - ./nginx/ssl:/ssl
     environment:
       - NGINX_ENVSUBST_FILTER=NGINX_
-      - NGINX_SHIBAUTHORIZER=${NGINX_SHIBAUTHORIZER:-unix:/opt/shibboleth-sp/shibauthorizer.sock}
-      - NGINX_SHIBRESOLVER=${NGINX_SHIBRESOLVER:-unix:/opt/shibboleth-sp/shibresolver.sock}
+      - NGINX_SHIBAUTHORIZER=${NGINX_SHIBAUTHORIZER:-shibboleth:12345}
+      - NGINX_SHIBRESPONDER=${NGINX_SHIBRESPONDER:-shibboleth:12345}
       - NGINX_TOMCAT
       - NGINX_NODE
       - NGINX_SERVER_NAMES
@@ -26,12 +26,13 @@ services:
   shibboleth:
     image: ghcr.io/ufal/dockerized-nginx-with-shibboleth/shibboleth:latest
     build: ./shibboleth
-    #ports:
-      #- 12345:12345
-      #- 12344:12344
     volumes:
-    # config (key material), logs
+    # config (+key material), logs
     - ./shibboleth/overrides:/overrides
     - ./shibboleth/sp-keys:/sp-keys
+    - logs:/opt/shibboleth-sp/var/log
     environment:
      - SHIB_HOSTNAME=${SHIB_HOSTNAME:?SHIB_HOSTNAME must be set}
+
+volumes:
+  logs:

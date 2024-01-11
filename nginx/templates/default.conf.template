@@ -30,7 +30,7 @@ server {
 
     location /Shibboleth.sso {
         include fastcgi_params;
-        fastcgi_pass ${NGINX_SHIBRESOLVER};
+        fastcgi_pass ${NGINX_SHIBRESPONDER};
     }
 
     location = /Shibboleth.sso/DiscoFeed/jsonp {
@@ -44,7 +44,7 @@ server {
         fastcgi_param REQUEST_URI '/Shibboleth.sso/DiscoFeed';
         fastcgi_param SERVER_NAME $server_name;
         fastcgi_param SERVER_PORT $server_port;
-        fastcgi_pass ${NGINX_SHIBRESOLVER};
+        fastcgi_pass ${NGINX_SHIBRESPONDER};
         echo_after_body ');';
     }
 

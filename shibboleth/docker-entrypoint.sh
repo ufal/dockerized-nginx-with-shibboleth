@@ -8,7 +8,7 @@ set -e
 # use keys in /sp-keys if they exist, otherwise generate them
 cd /sp-keys
 /opt/shibboleth-sp/etc/shibboleth/keygen.sh -n sp-signing || true
-/opt/shibboleth-sp/etc/shibboleth/keygen.sh -n sp-encrypt || true
+/opt/shibboleth-sp/etc/shibboleth/keygen.sh -n sp-encrypt || true   
 
 # copy keys to /opt/shibboleth-sp/etc/shibboleth
 cp -Rv /sp-keys/. /opt/shibboleth-sp/etc/shibboleth/
