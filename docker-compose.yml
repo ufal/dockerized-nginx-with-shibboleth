@@ -8,7 +8,6 @@ services:
       - 443:443
     volumes:
     # generate /ssl/dhparam.pem with openssl dhparam -out dhparam.pem 4096
-      - ./nginx/templates:/etc/nginx/templates
       - ./nginx/locations:/etc/nginx/locations
       - ./nginx/ssl:/ssl
     environment:
