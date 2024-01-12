@@ -2,6 +2,7 @@ version: '3'
 services:
   nginx:
     image: ghcr.io/ufal/dockerized-nginx-with-shibboleth/nginx-shib:latest
+    restart: unless-stopped
     build: ./nginx
     ports:
       - 80:80
@@ -12,7 +13,7 @@ services:
       - ./nginx/ssl:/ssl
     environment:
       - NGINX_ENVSUBST_FILTER=NGINX_
-      - NGINX_SHIBAUTHORIZER=${NGINX_SHIBAUTHORIZER:-shibboleth:12345}
+      - NGINX_SHIBAUTHORIZER=${NGINX_SHIBAUTHORIZER:-shibboleth:12344}
       - NGINX_SHIBRESPONDER=${NGINX_SHIBRESPONDER:-shibboleth:12345}
       - NGINX_TOMCAT
       - NGINX_NODE
@@ -23,6 +24,7 @@ services:
 
   shibboleth:
     image: ghcr.io/ufal/dockerized-nginx-with-shibboleth/shibboleth:latest
+    restart: unless-stopped
     build: ./shibboleth
     volumes:
     # config (+key material), logs
@@ -34,6 +36,7 @@ services:
 
   syslog:
     image: cr.fluentbit.io/fluent/fluent-bit:latest
+    restart: unless-stopped
     volumes:
       - ./fluent-bit/config.conf:/fluent-bit/etc/fluent-bit.conf
       - logs:/logs
