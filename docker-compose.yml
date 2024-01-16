@@ -19,6 +19,8 @@ services:
       - NGINX_NODE
       - NGINX_SERVER_NAMES
       - NGINX_RESOLVERS
+      # this configures client_max_body_size only for the repository /server location
+      - NGINX_MAX_BODY_SIZE=${NGINX_MAX_BODY_SIZE:-10G}
     depends_on:
       - shibboleth
 

@@ -12,6 +12,19 @@ upstream node {
     server ${NGINX_NODE};
 }
 
+# set client body size to 512M #
+client_max_body_size 512M;
+
+# Sets buffer size for reading client request body. In case the request body is larger than the buffer,
+# the whole body or only its part is written to a temporary file. By default, buffer size is equal to two memory pages.
+client_body_buffer_size 256k;
+
+# Defines a timeout for reading client request body. The timeout is set only for a period between two successive read
+# operations, not for the transmission of the whole request body.
+client_body_timeout 5s;
+# Defines a timeout for reading client request header.
+client_header_timeout 5s;
+
 server {
     error_log  /var/log/nginx/error.log notice;
     access_log  /var/log/nginx/access.log  main;
@@ -60,6 +73,7 @@ server {
 
     location /server/ {
         include proxy_params;
+        client_max_body_size ${NGINX_MAX_BODY_SIZE};
         proxy_pass http://tomcat;
     }
 

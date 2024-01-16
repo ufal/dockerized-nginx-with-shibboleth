@@ -46,6 +46,11 @@ NGINX_SHIBAUTHORIZER=
 NGINX_SHIBRESPONDER=
 ```
 
+The dspace backend location has a configurable `client_max_body_size` via
+```
+NGINX_MAX_BODY_SIZE
+```
+
 Nginx by default logs to stdout/stderr and syslog (provided by fluent-bit image). The syslog entries are written into the `logs` volume.
 
 ## additional configs for shibboleth
