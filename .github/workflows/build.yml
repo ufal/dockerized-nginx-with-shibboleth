@@ -28,6 +28,8 @@ jobs:
           context: "{{defaultContext}}:nginx"          
           push: true
           tags: ghcr.io/ufal/dockerized-nginx-with-shibboleth/nginx-shib:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
       -
         name: Build and push shibboleth
         uses: docker/build-push-action@v5
@@ -35,3 +37,5 @@ jobs:
             context: "{{defaultContext}}:shibboleth"
             push: true
             tags: ghcr.io/ufal/dockerized-nginx-with-shibboleth/shibboleth:latest
+            cache-from: type=gha
+            cache-to: type=gha,mode=max
