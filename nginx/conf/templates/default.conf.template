@@ -43,7 +43,7 @@ server {
     ssl_certificate_key /ssl/serverkey.pem;
     resolver ${NGINX_RESOLVERS} valid=300s; # normally this would be in ssl_params, but I need a template
     include ssl_params;
-    include cors_headers;
+    #include cors_headers;
 
     location = /shibauthorizer {
         internal;
