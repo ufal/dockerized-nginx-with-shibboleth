@@ -101,9 +101,6 @@ $cat shibboleth/overrides/etc/shibboleth/metadata-providers.xml
 ```
 configures 2 metadata sources
 
-
-
-
 # Case study - local testing
 
 1. create .env
