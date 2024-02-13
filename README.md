@@ -121,5 +121,5 @@ NGINX_MAX_BODY_SIZE=10G
    ```
    (on win, you can use `docker run -it --rm  -v %cd%:/out nginx /bin/bash -c "CMD"`)
 3. docker compose up
-
+4. open https://jm/Shibboleth.sso/DiscoFeed
 
