@@ -122,7 +122,8 @@ configures 2 metadata sources
    (on win, you can use `docker run -it --rm  -v %cd%:/out nginx /bin/bash -c "CMD"`)
 3. in ./
    ```
-   curl https://www.eduid.cz/docs/metadata2021.eduid.cz.crt.pem -o ./shibboleth/overrides/etc/shibbolethmetadata2021.eduid.cz.crt.pem
+   mkdir -p ./shibboleth/overrides/etc/shibboleth/
+   curl https://www.eduid.cz/docs/metadata2021.eduid.cz.crt.pem -o ./shibboleth/overrides/etc/shibboleth/metadata2021.eduid.cz.crt.pem
    ```
 3. in ./
    ```
