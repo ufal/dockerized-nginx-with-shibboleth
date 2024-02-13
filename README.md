@@ -100,3 +100,29 @@ $cat shibboleth/overrides/etc/shibboleth/metadata-providers.xml
 </MetadataProviders>
 ```
 configures 2 metadata sources
+
+
+
+
+# Case study - local testing
+
+1. create .env
+```
+SHIB_HOSTNAME=jm
+NGINX_TOMCAT=dev-5.pc:85
+NGINX_NODE=dev-5.pc:85
+NGINX_SERVER_NAMES="jm localhost"
+NGINX_RESOLVERS="1.1.1.1 8.8.8.8"
+NGINX_MAX_BODY_SIZE=10G
+```
+2. in ./nginx/ssl
+   ```
+   openssl dhparam -out dhparam.pem 4096
+   openssl genrsa -out /out/serverkey.pem 2048
+   openssl req -new -x509 -key /out/serverkey.pem -out /out/servercert.pem -days 365
+   cp server.crt nginx_chain_cert.pem
+   ```
+   (on win, you can use `docker run -it --rm  -v %cd%:/out nginx /bin/bash -c "CMD"`)
+3. docker compose up
+
+
