@@ -117,7 +117,7 @@ configures 2 metadata sources
    openssl dhparam -out dhparam.pem 4096
    openssl genrsa -out /out/serverkey.pem 2048
    openssl req -new -x509 -key /out/serverkey.pem -out /out/servercert.pem -days 365
-   cp server.crt nginx_chain_cert.pem
+   cp ./serverkey.pem nginx_chain_cert.pem
    ```
    (on win, you can use `docker run -it --rm  -v %cd%:/out nginx /bin/bash -c "CMD"`)
 3. in ./
