@@ -11,6 +11,7 @@ services:
     # generate /ssl/dhparam.pem with openssl dhparam -out dhparam.pem 4096
       - ./nginx/locations:/etc/nginx/locations
       - ./nginx/ssl:/ssl
+      - ./nginx/conf/templates:/etc/nginx/templates
     environment:
       - NGINX_ENVSUBST_FILTER=NGINX_
       - NGINX_SHIBAUTHORIZER=${NGINX_SHIBAUTHORIZER:-shibboleth:12344}
