@@ -27,8 +27,15 @@ for template in $(ls *.template); do
     envsubst "$my_vars" < $template > /opt/shibboleth-sp/etc/shibboleth/${template%.template}
 done
 
-# process xinclude in shibboleth2.xml
 cd /opt/shibboleth-sp/etc/shibboleth
+
+# if md_template.xml does not exist, remove the template attribute from shibboleth2.xml
+if [ ! -f md_template.xml ]; then
+    echo "Removing md_template attribute from shibboleth2.xml"
+    sed -i -e 's# template="md_template.xml"##' shibboleth2.xml
+fi
+
+# process xinclude in shibboleth2.xml
 echo "Processing xinclude in shibboleth2.xml"
 xmllint --xinclude --output shibboleth2.xml shibboleth2.xml
 

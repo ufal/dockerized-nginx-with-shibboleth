@@ -58,7 +58,7 @@ Nginx by default logs to stdout/stderr and syslog (provided by fluent-bit image)
 The shibboleth image (its entrypoint) has some similar mechanisms to what nginx does.
 
 0. New signing and encrypt keys are generated if they were not provided in `/sp-keys` (bind mounted from `./shibboleth/sp-keys`)
-1. `/overrides` (bind mounted by docker-compose from `./shibboleth/overrides`) gets overlaid on top of `/opt/shibboleth-sp` (this provides the option of overriding any defaults, e.g. `attribute-map.xml`)
+1. `/overrides` (bind mounted by docker-compose from `./shibboleth/overrides`) gets overlaid on top of `/opt/shibboleth-sp` (this provides the option of overriding any defaults, e.g. `attribute-map.xml`. You can provide `shibboleth/overrides/etc/shibboleth/md_template.xml` and this will be used as a template attribute on the `MetadataGenerator` `Handler` (`/Shibboleth.sso/Metadata`))
 2. `*.template` files from `/opt/shibboleth-sp/templates` get interpolated and the resulting files ends up in `/opt/shibboleth-sp/etc/shibboleth/${template%.template}`
 3. `shibboleth2.xml` is run through an xinclude processor (to add custom MetadataProviders)
 
