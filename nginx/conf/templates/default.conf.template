@@ -74,6 +74,11 @@ server {
     location /server/ {
         include proxy_params;
         client_max_body_size ${NGINX_MAX_BODY_SIZE};
+        #https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_connect_timeout says this shouldn't exceed 75 seconds
+        proxy_connect_timeout 75;
+        proxy_send_timeout 6000;
+        proxy_read_timeout 6000;
+        send_timeout 6000;
         proxy_pass http://tomcat;
     }
 
