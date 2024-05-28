@@ -100,3 +100,7 @@ $cat shibboleth/overrides/etc/shibboleth/metadata-providers.xml
 </MetadataProviders>
 ```
 configures 2 metadata sources
+
+# Case study - local testing
+
+see https://github.com/ufal/dockerized-nginx-with-shibboleth/wiki/casestudy
