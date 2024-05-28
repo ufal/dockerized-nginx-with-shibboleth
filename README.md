@@ -103,35 +103,4 @@ configures 2 metadata sources
 
 # Case study - local testing
 
-1. create .env
-   ```
-   SHIB_HOSTNAME=jm
-   NGINX_TOMCAT=dev-5.pc:85
-   NGINX_NODE=dev-5.pc:85
-   NGINX_SERVER_NAMES="jm localhost"
-   NGINX_RESOLVERS="1.1.1.1 8.8.8.8"
-   NGINX_MAX_BODY_SIZE=10G
-   ```
-2. in ./nginx/ssl
-   ```
-   openssl dhparam -out dhparam.pem 4096
-   openssl genrsa -out /out/serverkey.pem 2048
-   openssl req -new -x509 -key /out/serverkey.pem -out /out/servercert.pem -days 365
-   cp ./servercert.pem ./nginx_chain_cert.pem
-   ```
-   (on win, you can use `docker run -it --rm  -v %cd%:/out nginx /bin/bash -c "CMD"`)
-3. in ./
-   ```
-   mkdir -p ./shibboleth/overrides/etc/shibboleth/
-   curl https://www.eduid.cz/docs/metadata2021.eduid.cz.crt.pem -o ./shibboleth/overrides/etc/shibboleth/metadata2021.eduid.cz.crt.pem
-   ```
-3. in ./
-   ```
-   docker compose up
-   ```
-5. open https://jm/Shibboleth.sso/DiscoFeed
-6. optionally, you can inspect logs, unless you changed the default contents or created `proxied-idp.xml`, there will be errors/warnings in the log
-   ```
-   docker exec -it dockerized-nginx-with-shibboleth-shibboleth-1 /bin/bash -c "tail /opt/shibboleth-sp/var/log/shibboleth/shibd_warn.log -f"
-   ```
-
+see https://github.com/ufal/dockerized-nginx-with-shibboleth/wiki/casestudy
