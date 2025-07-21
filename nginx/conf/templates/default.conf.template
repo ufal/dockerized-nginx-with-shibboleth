@@ -5,10 +5,14 @@
 
 upstream tomcat {
     keepalive 2;
+    # tomcat closes idle connections after 20s, we need to close first
+    keepalive_timeout 19s;
     server ${NGINX_TOMCAT};
 }
 upstream node {
     keepalive 2;
+    # express closes idle connections after 5s, we need to close first
+    keepalive_timeout 4s;
     server ${NGINX_NODE};
 }
 
@@ -84,12 +88,16 @@ server {
         proxy_read_timeout 6000;
         send_timeout 6000;
         proxy_pass http://tomcat;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
     }
 
     location /server/api/authn/shibboleth {
         include shibboleth_auth;
         include proxy_params;
         proxy_pass http://tomcat;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
     }
 
     location / {
@@ -101,6 +109,7 @@ server {
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
         proxy_pass http://node;
+        proxy_http_version 1.1;
     }
 
     include /etc/nginx/locations/*;
