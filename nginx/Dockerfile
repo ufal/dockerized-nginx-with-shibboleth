@@ -3,7 +3,7 @@ FROM nginx:stable as build
 RUN apt-get update && apt-get install -y \
     gcc \
     make \
-    libpcre3-dev \
+    libpcre2-dev \
     zlib1g-dev \
     wget \
     git \
