@@ -49,6 +49,9 @@ use LF. Existing production certificates, SP keys and overrides were unchanged.
 - Compiler output has verified PIE, full RELRO and stack protection. A forced
   download failure leaves no output or staging directory; existing outputs are
   rejected without modification. Artifacts are published only after completion.
+- A native build under umask 077 produces 0755 directories/binary and 0644 data
+  files. An unrelated user can read all includes/licenses/metadata, verify the
+  checksum and execute the binary.
 - Separate-service integration uses the real Shibboleth FastCGI service, real
   Fluent Bit, temporary TLS/SP/IdP keys and locally signed SAML assertions. Checks
   cover metadata, standard template rendering, backend/frontend routing, logging,
