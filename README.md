@@ -13,8 +13,8 @@ docker compose up --build
 ```
 
 Compose calls the submodule's native `scripts/build.sh` to compile nginx 1.31.6 with the
-Shibboleth, headers-more and echo modules. The shared repository supplies the binary and
-FastCGI include files only; it has no runtime entrypoint, SP daemon or deployment tooling.
+Shibboleth, headers-more and echo modules. That build supplies the binary, FastCGI includes
+and licenses. The shared repository's pre-existing container/deployment tools are retained.
 This project's inline Compose build packages the binary in the official nginx 1.31.6 image,
 retaining its standard entrypoint and template handling. Compilation uses the same base as
 the runtime to keep library ABIs compatible. Project snippets/templates are baked into this

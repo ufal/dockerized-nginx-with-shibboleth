@@ -18,7 +18,6 @@ services:
         COPY --from=compiler /out/usr/sbin/nginx /usr/sbin/nginx
         COPY --from=compiler /out/etc/nginx/ /etc/nginx/
         COPY --from=compiler /out/licenses/ /usr/share/doc/nginx-shib/licenses/
-        COPY --from=compiler /out/build-info.txt /out/versions.env /out/SHA256SUMS /usr/share/doc/nginx-shib/
         COPY . /etc/nginx/
       additional_contexts:
         nginx-source: ./nginx/image
