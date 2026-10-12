@@ -206,7 +206,7 @@ def main():
                                        "healthcheck": {
                                            "test": ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1',8080),timeout=1).close()"],
                                            "interval": "1s", "timeout": "2s", "retries": 30}}
-        nginx["depends_on"]["backend"] = {"condition": "service_healthy", "required": True}
+        nginx["depends_on"]["backend"] = {"condition": "service_healthy"}
         compose_file = directory / "compose.json"
         compose_file.write_text(json.dumps(config), encoding="utf-8")
         compose = ["docker", "compose", "-p", project, "-f", str(compose_file)]
