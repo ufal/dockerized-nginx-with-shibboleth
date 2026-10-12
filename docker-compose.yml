@@ -3,12 +3,25 @@ services:
     image: ghcr.io/ufal/dockerized-nginx-with-shibboleth/nginx-shib:latest
     restart: unless-stopped
     build:
-      context: ./nginx/image
-      dockerfile: Dockerfile.shib
-      target: nginx-configured
+      context: ./nginx/conf
+      # Runtime packaging belongs here; compilation belongs to the submodule.
+      dockerfile_inline: |
+        FROM nginx:1.31.6 AS compiler
+        RUN apt-get update && apt-get install -y --no-install-recommends \
+            build-essential ca-certificates curl libpcre2-dev libssl-dev zlib1g-dev
+        WORKDIR /src
+        COPY --from=nginx-source /versions.env ./
+        COPY --from=nginx-source /scripts/build.sh scripts/build.sh
+        RUN sh scripts/build.sh /out
+        FROM nginx:1.31.6
+        COPY --from=compiler /out/usr/sbin/nginx /usr/sbin/nginx
+        COPY --from=compiler /out/etc/nginx/ /etc/nginx/
+        COPY --from=compiler /out/licenses/ /usr/share/doc/nginx-shib/licenses/
+        COPY --from=compiler /out/build-info.txt /out/versions.env /out/SHA256SUMS /usr/share/doc/nginx-shib/
+        COPY . /etc/nginx/
       additional_contexts:
-        nginx-config: ./nginx/conf
-    # Deploy the verified image; build the checked-out submodule with --build.
+        nginx-source: ./nginx/image
+    # Pull an existing consumer image or explicitly build from the submodule.
     pull_policy: missing
     ports:
       - 80:80

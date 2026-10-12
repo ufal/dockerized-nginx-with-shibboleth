@@ -4,13 +4,6 @@
 - nginx with shibboleth module
 - default config connects the two
 
-Deploy the verified published images without private source access:
-
-```sh
-docker compose pull
-docker compose up -d --no-build
-```
-
 For a source build, nginx uses the private `dataquest-dev/docker-nginx-shib-auth` Git submodule at
 `nginx/image`. You need read access to that repository. Initialize it before building:
 
@@ -19,12 +12,19 @@ git submodule update --init --recursive
 docker compose up --build
 ```
 
-Compose builds the submodule's `Dockerfile.shib`, target `nginx-configured`: nginx 1.31.6 with the Shibboleth,
-headers-more and echo modules compiled in. This target uses the separate `shibboleth` service at
-ports 12344/12345. It does not start a second SP. The SP image builds Shibboleth 3.6.0.
-The `nginx-config` named build context bakes this project's snippets/templates into the image,
-preserving the published image's configuration contract. Bind mounts can override those defaults.
-nginx versions/checksums are pinned upstream; update the submodule revision after testing upgrades.
+Compose calls the submodule's native `scripts/build.sh` to compile nginx 1.31.6 with the
+Shibboleth, headers-more and echo modules. The shared repository supplies the binary and
+FastCGI include files only; it has no runtime entrypoint, SP daemon or deployment tooling.
+This project's inline Compose build packages the binary in the official nginx 1.31.6 image,
+retaining its standard entrypoint and template handling. Compilation uses the same base as
+the runtime to keep library ABIs compatible. Project snippets/templates are baked into this
+consumer image and can be overridden with bind mounts. No separate nginx Dockerfile is needed.
+The SP remains the separate `shibboleth` service at ports 12344/12345 and builds SP 3.6.0.
+nginx versions/checksums are pinned in the submodule's `versions.env`; update its revision and
+the official image version in Compose together after testing upgrades.
+Compose 2.17 or newer with BuildKit is required for inline builds and additional contexts.
+There is no automatic image publishing or deployment workflow. Building creates local images;
+registry uploads are a separate operator action.
 
 ## additional configs for nginx
 Nginx is built from source in the shared submodule. Project snippets (`proxy_params`, `shibboleth_auth`,
@@ -132,8 +132,9 @@ see https://github.com/ufal/dockerized-nginx-with-shibboleth/wiki/casestudy
 ## Integration verification
 
 ```sh
-docker build -f nginx/image/Dockerfile.shib --target nginx-configured --build-context nginx-config=./nginx/conf -t local/nginx-shib-review nginx/image
-docker build -t local/shibboleth-review shibboleth
+docker compose build nginx shibboleth
+docker tag ghcr.io/ufal/dockerized-nginx-with-shibboleth/nginx-shib:latest local/nginx-shib-review:latest
+docker tag ghcr.io/ufal/dockerized-nginx-with-shibboleth/shibboleth:latest local/shibboleth-review:latest
 docker pull python:3.11-slim
 docker pull cr.fluentbit.io/fluent/fluent-bit:latest
 python -m pip install -r tests/requirements.txt
@@ -148,13 +149,3 @@ backend/frontend, and a locally signed SAML assertion. It checks metadata, disco
 redirects, attribute forwarding, logging, header spoofing, replay rejection and SP key preservation.
 The second run verifies the baked image without nginx configuration bind mounts. It does not test a production federation
 or DSpace's own authentication code. Review details and validation results are in `CODE_REVIEW.md`.
-
-## CI and private submodule access
-
-Configure the Actions secret `NGINX_SUBMODULE_TOKEN` with a fine-grained PAT or GitHub App token
-that has **Contents: read** access to `dataquest-dev/docker-nginx-shib-auth`. The parent repository's
-`GITHUB_TOKEN` cannot read a separate private repository. CI checks out the exact gitlink revision,
-builds and tests both images, and publishes only on a push to `main` after verification passes.
-The verification job has read-only permissions; a separate main-push job publishes the verified
-image artifact with package-write permission.
-Fork PRs cannot run this private-source workflow without access to the submodule.
