@@ -149,8 +149,12 @@ def main():
         </EntityDescriptor>''', encoding="utf-8")
         env = dict(os.environ, SHIB_HOSTNAME="localhost", NGINX_TOMCAT="backend:8080",
                    NGINX_NODE="backend:8080", NGINX_SERVER_NAMES="localhost", NGINX_RESOLVERS="127.0.0.11")
-        config = json.loads(run("docker", "compose", "-f", str(ROOT / "docker-compose.yml"),
+        config = json.loads(run("docker", "compose", "-p", project, "-f", str(ROOT / "docker-compose.yml"),
                                 "config", "--format", "json", env=env))
+        check(all(resource.get("name", "").startswith(project + "_")
+                  and not resource.get("external", False)
+                  for kind in ("networks", "volumes") for resource in config.get(kind, {}).values()),
+              "Compose networks and volumes use the random test project name")
         config.pop("name", None)
         nginx = config["services"]["nginx"]
         nginx.pop("build", None)

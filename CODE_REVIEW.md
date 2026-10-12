@@ -9,7 +9,7 @@ standalone image and the separate-service integration have been built and exerci
 Docker Desktop, Linux amd64. nginx is pinned to 1.31.6 and the SP to 3.6.0.
 
 The consumer gitlink pins the published shared revision
-`5329410df53d381f27725892a41d3b3af7338ae2`; the upstream fixes are available in
+`a1f494350ab18bc3a869b40267cb860dc5bdda45`; the upstream fixes are available in
 [draft PR #1](https://github.com/dataquest-dev/docker-nginx-shib-auth/pull/1).
 
 ## Scope
@@ -66,6 +66,13 @@ Tests use temporary keys/configuration, isolated container/network/volume names 
 ports. Commands are documented in the project and submodule READMEs.
 
 ## Remaining deployment requirements and limits
+
+Copilot follow-up review found three additional issues, now fixed: initialization is staged so
+copy/key-generation failures can be retried; inline RequestMaps are parsed and `/secure` protection
+is merged into every host mapping; and Compose configuration is generated with the randomized
+test project name so explicit network/volume names cannot refer to the normal project's resources.
+Five configuration-tool tests, an actual staged initialization with `shibd -t`, and all 17 integration
+checks passed after these fixes.
 
 The parent repository currently has no `NGINX_SUBMODULE_TOKEN` Actions secret. Supply a fine-grained
 PAT or GitHub App token with Contents: read access to the private shared repository before running
