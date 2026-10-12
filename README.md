@@ -4,12 +4,25 @@
 - nginx with shibboleth module
 - default config connects the two
 
-```
-docker compose up
+nginx is built from the private `dataquest-dev/docker-nginx-shib-auth` Git submodule at
+`nginx/image`. You need read access to that repository. Initialize it before building:
+
+```sh
+git submodule update --init --recursive
+docker compose up --build
 ```
 
+Compose builds the submodule's `Dockerfile.shib`, target `nginx`: nginx 1.31.6 with the Shibboleth,
+headers-more and echo modules compiled in. This target uses the separate `shibboleth` service at
+ports 12344/12345. It does not start a second SP. The SP image builds Shibboleth 3.6.0.
+nginx versions/checksums are pinned upstream; update the submodule revision after testing upgrades.
+
 ## additional configs for nginx
-Nginx is built on top of official docker image; everyting in there should work. Additionally:
+Nginx is built from source in the shared submodule. Project snippets (`proxy_params`, `shibboleth_auth`,
+`ssl_params`, `cors_headers`) are mounted read-only at their original `/etc/nginx` paths; templates
+are rendered from `/etc/nginx/templates` to `/etc/nginx/conf.d`.
+`NGINX_ENVSUBST_FILTER=^NGINX_` preserves nginx's own variables. Modules are compiled in, so
+additional configuration must not attempt to load the former dynamic `.so` modules. Additionally:
  
 - default.conf has a `include /etc/nginx/locations/*;` and docker-compose has a bind mount for that dir. This can be used to configure addtional locations
 - it's expected that `/ssl` bind mounted by docker compose from `./nginx/ssl` contains the following files:
@@ -65,6 +78,8 @@ The shibboleth image (its entrypoint) has some similar mechanisms to what nginx 
 Shibboleth (shibd, authorizer and responder) are run via supervisord. Supervisors logs go to stdout/stderr. Shibd logs end up in logs volume.
 
 You must set `SHIB_HOSTNAME` (in an .env file or some other way). By default this is used in the entityId and in the RequestMapper.
+Keep the existing signing/encryption key pairs in `shibboleth/sp-keys`. Startup reuses complete
+pairs and fails on an incomplete pair; it generates keys only when both files of a pair are absent.
 
 Example of the overrides dir:
 ```
@@ -104,3 +119,30 @@ configures 2 metadata sources
 # Case study - local testing
 
 see https://github.com/ufal/dockerized-nginx-with-shibboleth/wiki/casestudy
+
+## Integration verification
+
+```sh
+docker build -f nginx/image/Dockerfile.shib --target nginx -t local/nginx-shib-review nginx/image
+docker build -t local/shibboleth-review shibboleth
+docker pull python:3.11-slim
+docker pull cr.fluentbit.io/fluent/fluent-bit:latest
+python -m pip install -r tests/requirements.txt
+python tests/integration.py
+```
+
+The test starts an isolated Compose project with temporary TLS/SP/IdP keys and random loopback
+ports, and removes its containers and volumes afterwards. It uses this project's actual nginx
+templates, Shibboleth FastCGI service and Fluent Bit collector, an HTTP fixture for the DSpace
+backend/frontend, and a locally signed SAML assertion. It checks metadata, discovery JSONP,
+redirects, attribute forwarding, logging, header spoofing, replay rejection and SP key preservation.
+It does not test a production federation
+or DSpace's own authentication code. Review details and validation results are in `CODE_REVIEW.md`.
+
+## CI and private submodule access
+
+Configure the Actions secret `NGINX_SUBMODULE_TOKEN` with a fine-grained PAT or GitHub App token
+that has **Contents: read** access to `dataquest-dev/docker-nginx-shib-auth`. The parent repository's
+`GITHUB_TOKEN` cannot read a separate private repository. CI checks out the exact gitlink revision,
+builds and tests both images, and publishes only on a push to `main` after verification passes.
+Fork PRs cannot run this private-source workflow without access to the submodule.

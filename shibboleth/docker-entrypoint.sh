@@ -1,14 +1,25 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
 # envsubst is in gettext-base
 # xmllint is in libxml2-utils
 
 # use keys in /sp-keys if they exist, otherwise generate them
+mkdir -p /sp-keys
 cd /sp-keys
-/opt/shibboleth-sp/etc/shibboleth/keygen.sh -n sp-signing || true
-/opt/shibboleth-sp/etc/shibboleth/keygen.sh -n sp-encrypt || true   
+for use in signing encrypt; do
+    key="sp-$use-key.pem"
+    cert="sp-$use-cert.pem"
+    if [[ -f "$key" && -f "$cert" ]]; then
+        echo "Using existing SP $use key pair"
+    elif [[ -e "$key" || -e "$cert" ]]; then
+        echo "Incomplete SP $use key pair in /sp-keys; restore the missing file" >&2
+        exit 1
+    else
+        /opt/shibboleth-sp/etc/shibboleth/keygen.sh -n "sp-$use" -h "${SHIB_HOSTNAME:?SHIB_HOSTNAME must be set}"
+    fi
+done
 
 # copy keys to /opt/shibboleth-sp/etc/shibboleth
 cp -Rv /sp-keys/. /opt/shibboleth-sp/etc/shibboleth/
@@ -20,9 +31,10 @@ if [ -d /overrides ]; then
 fi
 
 # interpolate templates
-my_vars=$(printf '${%s} ' $(env | cut -d= -f1 | grep "${FILTER:-}"))
+my_vars=$(env | cut -d= -f1 | awk -v filter="${FILTER:-^SHIB_}" '$0 ~ filter {printf "${%s} ", $0}')
 cd /opt/shibboleth-sp/templates
-for template in $(ls *.template); do
+for template in *.template; do
+    [[ -f "$template" ]] || continue
     echo "Interpolating $template"
     envsubst "$my_vars" < $template > /opt/shibboleth-sp/etc/shibboleth/${template%.template}
 done
@@ -38,5 +50,8 @@ fi
 # process xinclude in shibboleth2.xml
 echo "Processing xinclude in shibboleth2.xml"
 xmllint --xinclude --output shibboleth2.xml shibboleth2.xml
+
+# Validate before supervisor starts endlessly restarting broken services.
+/opt/shibboleth-sp/sbin/shibd -t
 
 exec "$@"

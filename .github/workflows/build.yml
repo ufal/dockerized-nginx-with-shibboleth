@@ -1,41 +1,79 @@
 name: build
 
 on:
+  pull_request:
   push:
     branches:
       - 'main'
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   docker:
+    # Forks do not receive the credential needed for the private submodule.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+      - name: Read pinned nginx revision
+        id: nginx-ref
+        run: echo "sha=$(git ls-tree HEAD nginx/image | awk '{print $3}')" >> "$GITHUB_OUTPUT"
+      # GITHUB_TOKEN cannot read another private repository. Use a read-only
+      # fine-grained PAT or GitHub App token with access to the nginx repository.
+      - name: Checkout private nginx submodule
+        uses: actions/checkout@v4
+        with:
+          repository: dataquest-dev/docker-nginx-shib-auth
+          ref: ${{ steps.nginx-ref.outputs.sha }}
+          path: nginx/image
+          token: ${{ secrets.NGINX_SUBMODULE_TOKEN }}
+          persist-credentials: false
       -
-        # Setting up Docker Buildx with docker-container driver is required
-        # at the moment to be able to use a subdirectory with Git context
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       -
-        name: Login to Docker Hub
+        name: Login to GHCR
         uses: docker/login-action@v3
+        if: github.event_name == 'push'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       -
-        name: Build and push nginx
+        name: Build nginx
         uses: docker/build-push-action@v5
         with:
-          context: "{{defaultContext}}:nginx"          
-          push: true
-          tags: ghcr.io/ufal/dockerized-nginx-with-shibboleth/nginx-shib:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          context: ./nginx/image
+          file: ./nginx/image/Dockerfile.shib
+          target: nginx
+          load: true
+          tags: |
+            ghcr.io/ufal/dockerized-nginx-with-shibboleth/nginx-shib:latest
+            local/nginx-shib-review:latest
+          cache-from: type=gha,scope=nginx
+          cache-to: type=gha,scope=nginx,mode=max
       -
-        name: Build and push shibboleth
+        name: Build shibboleth
         uses: docker/build-push-action@v5
         with:
-            context: "{{defaultContext}}:shibboleth"
-            push: true
-            tags: ghcr.io/ufal/dockerized-nginx-with-shibboleth/shibboleth:latest
-            cache-from: type=gha
-            cache-to: type=gha,mode=max
+            context: ./shibboleth
+            load: true
+            tags: |
+              ghcr.io/ufal/dockerized-nginx-with-shibboleth/shibboleth:latest
+              local/shibboleth-review:latest
+            cache-from: type=gha,scope=shibboleth
+            cache-to: type=gha,scope=shibboleth,mode=max
+      - name: Verify nginx and Shibboleth integration
+        run: |
+          docker pull python:3.11-slim
+          docker pull cr.fluentbit.io/fluent/fluent-bit:latest
+          python -m pip install -r tests/requirements.txt
+          python tests/integration.py
+      - name: Publish verified images
+        if: github.event_name == 'push'
+        run: |
+          docker push ghcr.io/ufal/dockerized-nginx-with-shibboleth/nginx-shib:latest
+          docker push ghcr.io/ufal/dockerized-nginx-with-shibboleth/shibboleth:latest

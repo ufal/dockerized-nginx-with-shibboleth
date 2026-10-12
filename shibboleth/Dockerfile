@@ -4,7 +4,7 @@ COPY shibboleth_sp_with_fastcgi.sh /shibboleth_sp_with_fastcgi.sh
 
 RUN <<EOF
 apt-get update
-apt-get install -y wget build-essential libfcgi-dev libboost-all-dev openssl libssl-dev pkg-config libcurl4-openssl-dev
+apt-get install -y --no-install-recommends ca-certificates wget build-essential libfcgi-dev libboost-dev openssl libssl-dev pkg-config libcurl4-openssl-dev zlib1g-dev
 bash ./shibboleth_sp_with_fastcgi.sh
 EOF
 
@@ -21,6 +21,7 @@ COPY supervisord.conf /etc/supervisor/supervisord.conf
 COPY shibd_fcgi.conf /etc/supervisor/conf.d/shibd_fcgi.conf
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 ENTRYPOINT [ "/docker-entrypoint.sh" ]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
