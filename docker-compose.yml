@@ -1,4 +1,14 @@
 services:
+  nginx-compiler:
+    # Build dependency only: zero containers are started for this artifact image.
+    scale: 0
+    image: local/dspace-nginx-artifacts:1.31.6
+    pull_policy: build
+    build:
+      context: ./nginx/image
+      dockerfile: Dockerfile.shib
+      target: nginx-artifacts
+
   nginx:
     image: local/dspace-nginx-shib:1.31.6
     restart: unless-stopped
@@ -6,21 +16,14 @@ services:
       context: ./nginx/conf
       # Runtime packaging belongs here; compilation belongs to the submodule.
       dockerfile_inline: |
-        FROM nginx:1.31.6 AS compiler
-        RUN apt-get update && apt-get install -y --no-install-recommends \
-            build-essential ca-certificates curl libpcre2-dev libssl-dev zlib1g-dev
-        WORKDIR /src
-        COPY --from=nginx-source /versions.env ./
-        COPY --from=nginx-source /scripts/build.sh scripts/build.sh
-        RUN sh scripts/build.sh /out
         FROM nginx:1.31.6
         RUN rm /usr/sbin/nginx-debug
-        COPY --from=compiler /out/usr/sbin/nginx /usr/sbin/nginx
-        COPY --from=compiler /out/etc/nginx/ /etc/nginx/
-        COPY --from=compiler /out/licenses/ /usr/share/doc/nginx-shib/licenses/
+        COPY --from=nginx-artifacts /usr/sbin/nginx /usr/sbin/nginx
+        COPY --from=nginx-artifacts /etc/nginx/ /etc/nginx/
+        COPY --from=nginx-artifacts /licenses/ /usr/share/doc/nginx-shib/licenses/
         COPY . /etc/nginx/
       additional_contexts:
-        nginx-source: ./nginx/image
+        nginx-artifacts: service:nginx-compiler
     # Always use the pinned source build, rather than a stale registry image.
     pull_policy: build
     ports:

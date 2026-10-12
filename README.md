@@ -12,15 +12,17 @@ git submodule update --init --recursive
 docker compose up --build
 ```
 
-Compose calls the submodule's native `scripts/build.sh` to compile nginx 1.31.6 with the
-Shibboleth, headers-more and echo modules. That build supplies the binary, FastCGI includes
-and licenses. The shared repository's pre-existing container/deployment tools are retained.
+Docker is required for compilation. Compose builds the submodule's `Dockerfile.shib`,
+target `nginx-artifacts`, to compile nginx 1.31.6 with Shibboleth, headers-more and echo.
+The `nginx-compiler` service is a build dependency with zero replicas; it starts no container.
+The artifact image supplies the binary, FastCGI includes and licenses, without compiling SP.
+The shared repository's pre-existing container/deployment tools are retained.
 This project's inline Compose build packages the binary in the official nginx 1.31.6 image,
-retaining its standard entrypoint and template handling. Compilation uses the same base as
-the runtime to keep library ABIs compatible. Project snippets/templates are baked into this
+retaining its standard entrypoint and template handling. Compilation uses Ubuntu 22.04;
+the binary needs compatible Linux libraries. Project snippets/templates are baked into this
 consumer image and can be overridden with bind mounts. No separate nginx Dockerfile is needed.
 The SP remains the separate `shibboleth` service at ports 12344/12345 and builds SP 3.6.0.
-nginx versions/checksums are pinned in the submodule's `versions.env`; update its revision and
+nginx versions/checksums are pinned in the submodule's `Dockerfile.shib`; update its revision and
 the official image version in Compose together after testing upgrades.
 Compose 2.17 or newer with BuildKit is required for inline builds and additional contexts.
 There is no automatic image publishing or deployment workflow. Building creates local images;

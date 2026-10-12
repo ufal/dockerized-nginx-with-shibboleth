@@ -6,15 +6,17 @@ and the consuming project's Compose, nginx configuration and SP build/startup.
 
 ## Final scope
 
-The shared repository is a compiler. Its native Linux `scripts/build.sh` downloads
-checksum-pinned nginx 1.31.6 and the Shibboleth, headers-more and echo modules,
-compiles them together, and outputs a reusable binary, upstream FastCGI includes
-and redistribution licenses. Existing Dockerfiles, runtime examples and deployment
-tools are preserved; the consumer uses the native compiler rather than those tools.
+Docker is required for compilation. The existing `Dockerfile.shib` now separates
+nginx compilation from its legacy standalone SP build. The `nginx-artifacts` target
+outputs a reusable binary, upstream FastCGI includes and redistribution licenses.
+Source versions and checksums remain Dockerfile build arguments, read by the existing
+menu. No native build script or separate version file is added. Existing runtime
+examples, launchers and deployment tools are preserved.
 
-The consumer invokes that same script from its pinned Git submodule. Compose's
-inline build packages the binary on the same official nginx base used to compile
-it, retains the official entrypoint and bakes this project's configuration.
+The consumer builds that Docker target from its pinned Git submodule. A zero-replica
+Compose build dependency supplies artifacts to the consumer's inline packaging build.
+The runtime uses the official nginx image, retains its entrypoint and bakes this
+project's configuration. The compiler image is never started as a service.
 The consumer's existing Shibboleth SP stays separate and uses TCP FastCGI.
 There is no separate parent nginx Dockerfile and no automated registry publishing.
 No new shared runtime entrypoint, CI or deployment tooling is introduced.
@@ -23,22 +25,22 @@ No new shared runtime entrypoint, CI or deployment tooling is introduced.
 
 | Priority | Finding | Final resolution |
 |---|---|---|
-| P1 | Original shared image starts its own SP with Unix sockets, while this project already owns a separate TCP SP. | Consumer uses the new native compiler's artifacts. Existing shared container tools are unchanged and are not used by this integration. |
+| P1 | Original shared image starts its own SP with Unix sockets, while this project already owns a separate TCP SP. | Consumer builds the nginx-only artifact target and retains its own SP. The default shared standalone build remains available to existing launchers. |
 | P1 | Consumer needs template interpolation and the `main` log format. | Keep the official nginx image's entrypoint and base configuration in the consumer; bake project snippets/templates there. |
 | P1 | Consumer discovery JSONP uses echo; former dynamic module loaders cannot load statically linked modules. | Compile echo 0.63, headers-more 0.40 and nginx-http-shibboleth 2.0.2 in; remove the old nginx Dockerfile/module loader. |
 | P1 | Consumer's SP 3.5.2 download from a mutable `latest` path returns 404 and build errors were ignored. | Compile SP 3.6.0 from pinned HTTPS source URLs with SHA-256 verification and explicit dependencies. |
 | P2 | Default nginx version was stable rather than the newest requested release. | Pin nginx 1.31.6, confirmed latest mainline at nginx.org on the review date. |
 | P2 | Consumer suppresses key-generation errors and can start with incomplete persisted SP key pairs. | Reuse complete pairs, generate wholly absent pairs, reject incomplete pairs and validate SP configuration before starting supervisor. |
 | P2 | Default SP debug tracing logs complete SAML identity messages. | Default message/security logging to INFO. |
-| P2 | Runtime image library compatibility is required for a reusable dynamically linked binary. | Compile inside the consumer's target base and document the artifact's architecture/ABI. |
+| P2 | Runtime image library compatibility is required for a reusable dynamically linked binary. | Compile on Ubuntu 22.04, document compatible Linux libraries and verify the resulting binary in the consumer's official nginx runtime. |
 
 Build inputs exclude local SP identities, TLS material and overrides. Linux scripts
 use LF. Existing production certificates, SP keys and overrides were unchanged.
 
 ## Validation
 
-- Compiler script builds nginx 1.31.6 on the official nginx image's Debian
-  toolchain, checking all four source archives. Only SSL and the three required
+- Docker artifact target builds nginx 1.31.6 on Ubuntu 22.04, checking all four
+  source archives. Only SSL and the three required
   third-party modules are explicitly enabled; unrelated nginx features were removed.
 - Consumer image inherits `/docker-entrypoint.sh` from the official nginx image.
 - Separate-service integration uses the real Shibboleth FastCGI service, real
