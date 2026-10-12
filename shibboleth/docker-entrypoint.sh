@@ -31,7 +31,7 @@ if [ -d /overrides ]; then
 fi
 
 # interpolate templates
-my_vars=$(env | cut -d= -f1 | awk -v filter="${FILTER:-^SHIB_}" '$0 ~ filter {printf "${%s} ", $0}')
+my_vars=$(env | cut -d= -f1 | awk -v filter="${FILTER:-}" '$0 ~ filter {printf "${%s} ", $0}')
 cd /opt/shibboleth-sp/templates
 for template in *.template; do
     [[ -f "$template" ]] || continue

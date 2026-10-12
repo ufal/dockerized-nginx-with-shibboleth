@@ -4,13 +4,15 @@ Reviewed on 2026-10-12. Shared-repository baseline:
 `dataquest-dev/docker-nginx-shib-auth@3d147b5e53750937c1e53a69470cf44845e7b208`.
 
 The original shared image was not a direct replacement for this project's nginx image. The revised
-`Dockerfile.shib --target nginx` is compatible with this project's separate FastCGI SP. Both the
+`Dockerfile.shib --target nginx-configured` is compatible with this project's separate FastCGI SP. Both the
 standalone image and the separate-service integration have been built and exercised locally on
 Docker Desktop, Linux amd64. nginx is pinned to 1.31.6 and the SP to 3.6.0.
 
 The consumer gitlink pins the published shared revision
-`a1f494350ab18bc3a869b40267cb860dc5bdda45`; the upstream fixes are available in
-[draft PR #1](https://github.com/dataquest-dev/docker-nginx-shib-auth/pull/1).
+`824886883fbfafea9273a5869d0aca141ce4a1f5`, retained by the annotated
+[`nginx-1.31.6-dspace-v1` tag](https://github.com/dataquest-dev/docker-nginx-shib-auth/tree/nginx-1.31.6-dspace-v1).
+The upstream fixes are available in [PR #1](https://github.com/dataquest-dev/docker-nginx-shib-auth/pull/1).
+The tag retains the reviewed commit even if the feature branch is removed after a squash merge.
 
 ## Scope
 
@@ -71,8 +73,22 @@ Copilot follow-up review found three additional issues, now fixed: initializatio
 copy/key-generation failures can be retried; inline RequestMaps are parsed and `/secure` protection
 is merged into every host mapping; and Compose configuration is generated with the randomized
 test project name so explicit network/volume names cannot refer to the normal project's resources.
-Five configuration-tool tests, an actual staged initialization with `shibd -t`, and all 17 integration
-checks passed after these fixes.
+The follow-up also handles malformed XML as a retryable validation failure. Six configuration-tool
+tests and an actual staged initialization with `shibd -t` passed.
+
+Claude Opus 5.5 independently reviewed both updated PRs. Its deployment findings are addressed by
+the shared `nginx-configured` target: the consumer supplies a named configuration build context,
+so the published image contains its templates/snippets without a parent nginx Dockerfile. Normal
+deployments pull images; source builds are explicit. Standard nginx HTTP, thread, stream and mail
+features are restored, shutdown tolerates an already-exited child, and the standalone authorizer
+check requires the actual SP response rather than accepting any error.
+
+Verification uses read-only CI credentials; package-write permission is limited to a separate
+main-push publishing job. The gitlink SHA is validated before checkout. Historical custom SP
+template interpolation remains supported. Tests now retain the actual Compose mounts and verify
+their paths, and also exercise the image with no nginx configuration bind mounts. All 19 checks
+passed in each mode (38 integration checks total). The published tag prevents the reviewed SHA
+from becoming unreachable without merging either PR prematurely.
 
 The parent repository currently has no `NGINX_SUBMODULE_TOKEN` Actions secret. Supply a fine-grained
 PAT or GitHub App token with Contents: read access to the private shared repository before running

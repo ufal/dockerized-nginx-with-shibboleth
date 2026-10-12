@@ -4,7 +4,14 @@
 - nginx with shibboleth module
 - default config connects the two
 
-nginx is built from the private `dataquest-dev/docker-nginx-shib-auth` Git submodule at
+Deploy the verified published images without private source access:
+
+```sh
+docker compose pull
+docker compose up -d --no-build
+```
+
+For a source build, nginx uses the private `dataquest-dev/docker-nginx-shib-auth` Git submodule at
 `nginx/image`. You need read access to that repository. Initialize it before building:
 
 ```sh
@@ -12,9 +19,11 @@ git submodule update --init --recursive
 docker compose up --build
 ```
 
-Compose builds the submodule's `Dockerfile.shib`, target `nginx`: nginx 1.31.6 with the Shibboleth,
+Compose builds the submodule's `Dockerfile.shib`, target `nginx-configured`: nginx 1.31.6 with the Shibboleth,
 headers-more and echo modules compiled in. This target uses the separate `shibboleth` service at
 ports 12344/12345. It does not start a second SP. The SP image builds Shibboleth 3.6.0.
+The `nginx-config` named build context bakes this project's snippets/templates into the image,
+preserving the published image's configuration contract. Bind mounts can override those defaults.
 nginx versions/checksums are pinned upstream; update the submodule revision after testing upgrades.
 
 ## additional configs for nginx
@@ -123,12 +132,13 @@ see https://github.com/ufal/dockerized-nginx-with-shibboleth/wiki/casestudy
 ## Integration verification
 
 ```sh
-docker build -f nginx/image/Dockerfile.shib --target nginx -t local/nginx-shib-review nginx/image
+docker build -f nginx/image/Dockerfile.shib --target nginx-configured --build-context nginx-config=./nginx/conf -t local/nginx-shib-review nginx/image
 docker build -t local/shibboleth-review shibboleth
 docker pull python:3.11-slim
 docker pull cr.fluentbit.io/fluent/fluent-bit:latest
 python -m pip install -r tests/requirements.txt
 python tests/integration.py
+python tests/integration.py --image-only
 ```
 
 The test starts an isolated Compose project with temporary TLS/SP/IdP keys and random loopback
@@ -136,7 +146,7 @@ ports, and removes its containers and volumes afterwards. It uses this project's
 templates, Shibboleth FastCGI service and Fluent Bit collector, an HTTP fixture for the DSpace
 backend/frontend, and a locally signed SAML assertion. It checks metadata, discovery JSONP,
 redirects, attribute forwarding, logging, header spoofing, replay rejection and SP key preservation.
-It does not test a production federation
+The second run verifies the baked image without nginx configuration bind mounts. It does not test a production federation
 or DSpace's own authentication code. Review details and validation results are in `CODE_REVIEW.md`.
 
 ## CI and private submodule access
@@ -145,4 +155,6 @@ Configure the Actions secret `NGINX_SUBMODULE_TOKEN` with a fine-grained PAT or 
 that has **Contents: read** access to `dataquest-dev/docker-nginx-shib-auth`. The parent repository's
 `GITHUB_TOKEN` cannot read a separate private repository. CI checks out the exact gitlink revision,
 builds and tests both images, and publishes only on a push to `main` after verification passes.
+The verification job has read-only permissions; a separate main-push job publishes the verified
+image artifact with package-write permission.
 Fork PRs cannot run this private-source workflow without access to the submodule.

@@ -5,9 +5,11 @@ services:
     build:
       context: ./nginx/image
       dockerfile: Dockerfile.shib
-      target: nginx
-    # Build the checked-out submodule rather than pulling an older :latest image.
-    pull_policy: build
+      target: nginx-configured
+      additional_contexts:
+        nginx-config: ./nginx/conf
+    # Deploy the verified image; build the checked-out submodule with --build.
+    pull_policy: missing
     ports:
       - 80:80
       - 443:443

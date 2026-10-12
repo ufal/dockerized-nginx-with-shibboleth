@@ -120,12 +120,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--nginx-image", default="local/nginx-shib-review:latest")
     parser.add_argument("--shib-image", default="local/shibboleth-review:latest")
+    parser.add_argument("--image-only", action="store_true", help="verify baked nginx configuration without config bind mounts")
     args = parser.parse_args()
     project = "shib-review-" + uuid.uuid4().hex[:10]
     with tempfile.TemporaryDirectory(prefix="shib-review-") as tmp:
         directory = Path(tmp)
-        for subdir in ["ssl", "keys", "overrides/etc/shibboleth", "locations"]:
+        for subdir in ["ssl", "keys", "overrides/etc/shibboleth", "overrides/templates", "locations"]:
             (directory / subdir).mkdir(parents=True)
+        sp_template = (ROOT / "shibboleth/templates/shibboleth2.xml.template").read_text(encoding="utf-8")
+        (directory / "overrides/templates/shibboleth2.xml.template").write_text(
+            sp_template.replace('supportContact="root@localhost"', 'supportContact="${TEST_SUPPORT_CONTACT}"'),
+            encoding="utf-8")
         # The fixture IdP key must be readable by the Python process that signs
         # assertions. Generate fixture TLS/IdP files as that host user on Linux.
         generator_user = ["--user", f"{os.getuid()}:{os.getgid()}"] if hasattr(os, "getuid") else []
@@ -162,16 +167,32 @@ def main():
         nginx["image"] = args.nginx_image
         nginx["restart"] = "no"
         nginx["ports"] = ["127.0.0.1::443", "127.0.0.1::80"]
-        nginx["volumes"] = [f"{ROOT / 'nginx/conf' / snippet}:/etc/nginx/{snippet}:ro"
-                            for snippet in ["proxy_params", "shibboleth_auth", "ssl_params", "cors_headers"]] + [
-                            f"{ROOT / 'nginx/conf/templates'}:/etc/nginx/templates:ro",
-                            f"{directory / 'ssl'}:/ssl:ro", f"{directory / 'locations'}:/etc/nginx/locations:ro"]
+        expected_config = {f"/etc/nginx/{name}": ROOT / "nginx/conf" / name
+                           for name in ("proxy_params", "shibboleth_auth", "ssl_params", "cors_headers", "templates")}
+        actual_config = {mount["target"]: mount for mount in nginx["volumes"]}
+        check(all(target in actual_config and actual_config[target]["type"] == "bind"
+                  and actual_config[target].get("read_only", False)
+                  and Path(actual_config[target]["source"]).resolve() == source.resolve()
+                  for target, source in expected_config.items()),
+              "Compose mounts the actual project configuration at its original include paths")
+        def replace_mount(service, target, source):
+            mounts = [mount for mount in service["volumes"] if mount["target"] == target]
+            if len(mounts) != 1 or mounts[0]["type"] != "bind":
+                raise AssertionError(f"Expected one bind mount for {target}")
+            mounts[0]["source"] = str(source)
+
+        replace_mount(nginx, "/ssl", directory / "ssl")
+        replace_mount(nginx, "/etc/nginx/locations", directory / "locations")
+        if args.image_only:
+            nginx["volumes"] = [mount for mount in nginx["volumes"]
+                                if mount["target"] in ("/ssl", "/etc/nginx/locations")]
         shib = config["services"]["shibboleth"]
         shib.pop("build", None)
         shib["image"] = args.shib_image
         shib["restart"] = "no"
-        shib["volumes"] = [f"{directory / 'keys'}:/sp-keys", f"{directory / 'overrides'}:/overrides:ro",
-                           "logs:/opt/shibboleth-sp/var/log"]
+        shib["environment"]["TEST_SUPPORT_CONTACT"] = "support@example.test"
+        replace_mount(shib, "/sp-keys", directory / "keys")
+        replace_mount(shib, "/overrides", directory / "overrides")
         config["services"]["syslog"].pop("ports", None)
         config["services"]["syslog"]["restart"] = "no"
         config["services"]["backend"] = {"image": "python:3.11-slim", "command": ["python", "/backend.py"],
@@ -208,6 +229,9 @@ def main():
                     pass
                 time.sleep(1)
             check(status == 200 and ENTITY.encode() in body, "real SP metadata served over HTTPS")
+            rendered_sp = run(*compose, "exec", "-T", "shibboleth", "cat", "/opt/shibboleth-sp/etc/shibboleth/shibboleth2.xml")
+            check('supportContact="support@example.test"' in rendered_sp,
+                  "existing SP templates interpolate custom environment variables")
             run(*compose, "exec", "-T", "nginx", "nginx", "-t")
             check("nginx/1.31.6" in run(*compose, "exec", "-T", "nginx", "bash", "-c", "nginx -v 2>&1"),
                   "latest mainline nginx 1.31.6 is running")
