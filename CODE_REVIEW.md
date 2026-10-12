@@ -9,8 +9,8 @@ standalone image and the separate-service integration have been built and exerci
 Docker Desktop, Linux amd64. nginx is pinned to 1.31.6 and the SP to 3.6.0.
 
 The consumer gitlink pins the published shared revision
-`824886883fbfafea9273a5869d0aca141ce4a1f5`, retained by the annotated
-[`nginx-1.31.6-dspace-v1` tag](https://github.com/dataquest-dev/docker-nginx-shib-auth/tree/nginx-1.31.6-dspace-v1).
+`5cbcdd2321516cc3e51a544786cbf1eae34e7bbe`, retained by the annotated
+[`nginx-1.31.6-dspace-v2` tag](https://github.com/dataquest-dev/docker-nginx-shib-auth/tree/nginx-1.31.6-dspace-v2).
 The upstream fixes are available in [PR #1](https://github.com/dataquest-dev/docker-nginx-shib-auth/pull/1).
 The tag retains the reviewed commit even if the feature branch is removed after a squash merge.
 
@@ -86,9 +86,15 @@ check requires the actual SP response rather than accepting any error.
 Verification uses read-only CI credentials; package-write permission is limited to a separate
 main-push publishing job. The gitlink SHA is validated before checkout. Historical custom SP
 template interpolation remains supported. Tests now retain the actual Compose mounts and verify
-their paths, and also exercise the image with no nginx configuration bind mounts. All 19 checks
-passed in each mode (38 integration checks total). The published tag prevents the reviewed SHA
+their paths, and also exercise the image with no nginx configuration bind mounts. All 20 checks
+passed in each mode (40 integration checks total). The published tag prevents the reviewed SHA
 from becoming unreachable without merging either PR prematurely.
+
+The final Copilot follow-up adds explicit post-restart readiness verification, rejects copied
+configuration symlinks before reading or mounting them, and exits from the termination handler
+without resuming startup. Eight configuration-tool tests pass on Linux, including real symlink
+fixtures. Standalone lifecycle checks include deterministic termination during validation. The
+nginx-only and configured targets have their own filtered-template and `nginx -t` CI smoke tests.
 
 The parent repository currently has no `NGINX_SUBMODULE_TOKEN` Actions secret. Supply a fine-grained
 PAT or GitHub App token with Contents: read access to the private shared repository before running

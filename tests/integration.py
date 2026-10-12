@@ -284,10 +284,13 @@ def main():
             check(status >= 400, "replayed assertion is rejected")
             keys_before = key_hashes(directory / "keys", args.shib_image)
             run(*compose, "restart", "shibboleth")
+            recovered = False
             for _ in range(30):
                 time.sleep(1)
                 if request("/Shibboleth.sso/Metadata")[0] == 200:
+                    recovered = True
                     break
+            check(recovered, "Shibboleth serves metadata again after restart")
             keys_after = key_hashes(directory / "keys", args.shib_image)
             check(keys_before == keys_after and len(keys_after) == 4, "SP signing/encryption keys survive restart")
             partial = directory / "partial-keys"
