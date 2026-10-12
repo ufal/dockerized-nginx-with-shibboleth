@@ -1,6 +1,6 @@
 services:
   nginx:
-    image: ghcr.io/ufal/dockerized-nginx-with-shibboleth/nginx-shib:latest
+    image: local/dspace-nginx-shib:1.31.6
     restart: unless-stopped
     build:
       context: ./nginx/conf
@@ -14,6 +14,7 @@ services:
         COPY --from=nginx-source /scripts/build.sh scripts/build.sh
         RUN sh scripts/build.sh /out
         FROM nginx:1.31.6
+        RUN rm /usr/sbin/nginx-debug
         COPY --from=compiler /out/usr/sbin/nginx /usr/sbin/nginx
         COPY --from=compiler /out/etc/nginx/ /etc/nginx/
         COPY --from=compiler /out/licenses/ /usr/share/doc/nginx-shib/licenses/
@@ -21,8 +22,8 @@ services:
         COPY . /etc/nginx/
       additional_contexts:
         nginx-source: ./nginx/image
-    # Pull an existing consumer image or explicitly build from the submodule.
-    pull_policy: missing
+    # Always use the pinned source build, rather than a stale registry image.
+    pull_policy: build
     ports:
       - 80:80
       - 443:443
@@ -49,9 +50,10 @@ services:
       - shibboleth
 
   shibboleth:
-    image: ghcr.io/ufal/dockerized-nginx-with-shibboleth/shibboleth:latest
+    image: local/dspace-shibboleth:3.6.0
     restart: unless-stopped
     build: ./shibboleth
+    pull_policy: build
     volumes:
     # config (+key material), logs
     - ./shibboleth/overrides:/overrides
@@ -61,7 +63,7 @@ services:
      - SHIB_HOSTNAME=${SHIB_HOSTNAME:?SHIB_HOSTNAME must be set}
 
   syslog:
-    image: cr.fluentbit.io/fluent/fluent-bit:latest
+    image: cr.fluentbit.io/fluent/fluent-bit@sha256:c5542543523c9678398dd78d927c05e8425ec15b038f226b67b3b019b1a70845
     restart: unless-stopped
     volumes:
       - ./fluent-bit/config.conf:/fluent-bit/etc/fluent-bit.conf

@@ -25,6 +25,8 @@ the official image version in Compose together after testing upgrades.
 Compose 2.17 or newer with BuildKit is required for inline builds and additional contexts.
 There is no automatic image publishing or deployment workflow. Building creates local images;
 registry uploads are a separate operator action.
+Both built services use local image names and `pull_policy: build`, so normal startup uses
+the pinned sources instead of pulling an older registry tag.
 
 ## additional configs for nginx
 Nginx is built from source in the shared submodule. Project snippets (`proxy_params`, `shibboleth_auth`,
@@ -133,10 +135,10 @@ see https://github.com/ufal/dockerized-nginx-with-shibboleth/wiki/casestudy
 
 ```sh
 docker compose build nginx shibboleth
-docker tag ghcr.io/ufal/dockerized-nginx-with-shibboleth/nginx-shib:latest local/nginx-shib-review:latest
-docker tag ghcr.io/ufal/dockerized-nginx-with-shibboleth/shibboleth:latest local/shibboleth-review:latest
+docker tag local/dspace-nginx-shib:1.31.6 local/nginx-shib-review:latest
+docker tag local/dspace-shibboleth:3.6.0 local/shibboleth-review:latest
 docker pull python:3.11-slim
-docker pull cr.fluentbit.io/fluent/fluent-bit:latest
+docker compose pull syslog
 python -m pip install -r tests/requirements.txt
 python tests/integration.py
 python tests/integration.py --image-only

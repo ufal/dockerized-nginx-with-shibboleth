@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import time
 import uuid
@@ -153,8 +154,12 @@ def main():
           </IDPSSODescriptor>
         </EntityDescriptor>''', encoding="utf-8")
         env = dict(os.environ, SHIB_HOSTNAME="localhost", NGINX_TOMCAT="backend:8080",
-                   NGINX_NODE="backend:8080", NGINX_SERVER_NAMES="localhost", NGINX_RESOLVERS="127.0.0.11")
-        config = json.loads(run("docker", "compose", "-p", project, "-f", str(ROOT / "docker-compose.yml"),
+                   NGINX_NODE="backend:8080", NGINX_SERVER_NAMES="localhost", NGINX_RESOLVERS="127.0.0.11",
+                   NGINX_SHIBAUTHORIZER="shibboleth:12344", NGINX_SHIBRESPONDER="shibboleth:12345",
+                   NGINX_MAX_BODY_SIZE="10G")
+        env_file = directory / "empty.env"
+        env_file.write_text("", encoding="utf-8")
+        config = json.loads(run("docker", "compose", "--env-file", str(env_file), "-p", project, "-f", str(ROOT / "docker-compose.yml"),
                                 "config", "--format", "json", env=env))
         check(all(resource.get("name", "").startswith(project + "_")
                   and not resource.get("external", False)
@@ -188,6 +193,7 @@ def main():
                                 if mount["target"] in ("/ssl", "/etc/nginx/locations")]
         shib = config["services"]["shibboleth"]
         shib.pop("build", None)
+        shib.pop("pull_policy", None)
         shib["image"] = args.shib_image
         shib["restart"] = "no"
         shib["environment"]["TEST_SUPPORT_CONTACT"] = "support@example.test"
@@ -306,14 +312,23 @@ def main():
                   and not (partial / "sp-signing-cert.pem").exists(),
                   "incomplete existing key pair fails without replacing the SP identity")
         except Exception:
-            print(run(*compose, "logs", "--tail", "80"), flush=True)
+            logs = subprocess.run([*compose, "logs", "--tail", "80"], capture_output=True,
+                                  text=True, encoding="utf-8", errors="replace")
+            print(logs.stdout + logs.stderr, flush=True)
             diagnostic = subprocess.run([*compose, "exec", "-T", "shibboleth", "bash", "-c",
                                          "tail -80 /opt/shibboleth-sp/var/log/shibboleth/shibd.log || true"],
                                         capture_output=True, text=True, encoding="utf-8", errors="replace")
             print(diagnostic.stdout, flush=True)
             raise
         finally:
-            run(*compose, "down", "--volumes", "--remove-orphans")
+            failing = sys.exc_info()[0] is not None
+            cleanup = subprocess.run([*compose, "down", "--volumes", "--remove-orphans"],
+                                     capture_output=True, text=True, encoding="utf-8", errors="replace")
+            if cleanup.returncode:
+                if failing:
+                    print("Cleanup failed: " + cleanup.stderr, flush=True)
+                else:
+                    raise RuntimeError("Cleanup failed: " + cleanup.stderr)
 
 
 if __name__ == "__main__":

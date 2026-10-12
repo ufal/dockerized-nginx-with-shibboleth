@@ -42,10 +42,13 @@ use LF. Existing production certificates, SP keys and overrides were unchanged.
 
 - Compiler script builds nginx 1.31.6 on both Ubuntu 22.04 and the official nginx
   image's Debian toolchain, checking all four source archives.
-- Optional Docker compiler exports ordinary artifact files (about 1.95 MB), not
+- Optional Docker compiler exports ordinary artifact files, not
   a runnable service image. Exported binary checksum, version, dynamic libraries
   and nginx configuration syntax with all three third-party modules are verified.
 - Consumer image inherits `/docker-entrypoint.sh` from the official nginx image.
+- Compiler output has verified PIE, full RELRO and stack protection. A forced
+  download failure leaves no output or staging directory; existing outputs are
+  rejected without modification. Artifacts are published only after completion.
 - Separate-service integration uses the real Shibboleth FastCGI service, real
   Fluent Bit, temporary TLS/SP/IdP keys and locally signed SAML assertions. Checks
   cover metadata, standard template rendering, backend/frontend routing, logging,
