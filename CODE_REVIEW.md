@@ -56,6 +56,8 @@ use LF. Existing production certificates, SP keys and overrides were unchanged.
   AuthnRequest generation, tampered-signature rejection, session creation,
   attribute forwarding, spoofed-header removal, replay rejection, restart,
   SP key preservation and incomplete-key rejection.
+- Startup ordering includes the internal syslog service; the test backend has a
+  TCP health check and nginx waits for it before loading upstream host names.
 - The integration test also runs without nginx configuration bind mounts to
   verify the consumer image's baked defaults. All 20 checks pass in each mode
   (40 integration checks total).

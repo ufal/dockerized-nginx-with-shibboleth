@@ -48,6 +48,7 @@ services:
       - NGINX_MAX_BODY_SIZE=${NGINX_MAX_BODY_SIZE:-10G}
     depends_on:
       - shibboleth
+      - syslog
 
   shibboleth:
     image: local/dspace-shibboleth:3.6.0
