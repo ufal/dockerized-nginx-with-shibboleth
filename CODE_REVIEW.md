@@ -19,7 +19,9 @@ The runtime uses the official nginx image, retains its entrypoint and bakes this
 project's configuration. The compiler image is never started as a service.
 The consumer's existing Shibboleth SP stays separate and uses TCP FastCGI.
 There is no separate parent nginx Dockerfile and no automated registry publishing.
-No new shared runtime entrypoint, CI or deployment tooling is introduced.
+The shared CI compiles nginx with the three static modules using Docker, then retains
+a compressed binary artifact and checksum for 30 days. The artifact excludes SP.
+It does not publish images or deploy services.
 
 ## Findings resolved
 
