@@ -48,6 +48,11 @@ use LF. Existing production certificates, SP keys and overrides were unchanged.
 
 ## Validation
 
+- Release-consumer commit `e1d65b2` builds without a submodule checkout using the
+  pinned private GitHub Release asset and a read-only BuildKit secret. The resulting
+  image passes root ownership, inherited entrypoint and credential exclusion checks.
+  Both real SP 3.6.0 / signed SAML modes pass all 20 checks each in
+  [the isolated CI run](https://github.com/dataquest-dev/docker-nginx-shib-auth/actions/runs/38461500452).
 - Docker artifact target builds nginx 1.30.5 on Ubuntu 22.04, checking all four
   source archives. Only SSL and the three required
   third-party modules are explicitly enabled; unrelated nginx features were removed.
