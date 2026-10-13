@@ -49,6 +49,10 @@ use LF. Existing production certificates, SP keys and overrides were unchanged.
   source archives. Only SSL and the three required
   third-party modules are explicitly enabled; unrelated nginx features were removed.
 - Consumer image inherits `/docker-entrypoint.sh` from the official nginx image.
+- Standalone image passes `nginx -t` and reports nginx 1.30.5 / SP 3.6.0;
+  nginx licenses are under `/usr/share/doc/nginx-shib/licenses`, with no `/licenses` root.
+- A standalone build overriding nginx's version and checksum reuses the SP
+  compilation layer, verified as `CACHED` in Docker's build output.
 - Separate-service integration uses the real Shibboleth FastCGI service, real
   Fluent Bit, temporary TLS/SP/IdP keys and locally signed SAML assertions. Checks
   cover metadata, standard template rendering, backend/frontend routing, logging,
