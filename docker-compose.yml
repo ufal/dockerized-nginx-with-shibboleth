@@ -1,30 +1,34 @@
 services:
-  nginx-compiler:
-    # Build dependency only: zero containers are started for this artifact image.
-    scale: 0
-    image: local/dspace-nginx-artifacts:1.30.5
-    pull_policy: build
-    build:
-      context: ./nginx/image
-      dockerfile: Dockerfile.shib
-      target: nginx-artifacts
-
   nginx:
     image: local/dspace-nginx-shib:1.30.5
+    platform: linux/amd64
     restart: unless-stopped
     build:
       context: ./nginx/conf
-      # Runtime packaging belongs here; compilation belongs to the submodule.
+      # Download the pinned upstream release; this project only packages it.
       dockerfile_inline: |
+        FROM ubuntu:22.04 AS nginx-release
+        RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl
+        ARG NGINX_RELEASE_ASSET_ID=638077019
+        ARG NGINX_RELEASE_SHA256=ce86499c6587fe5048f0fe5b85f69c009d2d941da3a2b47044ca12d2841dddc4
+        RUN --mount=type=secret,id=github_token,required=true \
+            curl -fsSL --retry 3 \
+              -H "Authorization: Bearer $$(cat /run/secrets/github_token)" \
+              -H "Accept: application/octet-stream" \
+              -o /tmp/nginx.tar.gz \
+              "https://api.github.com/repos/dataquest-dev/docker-nginx-shib-auth/releases/assets/$$NGINX_RELEASE_ASSET_ID" \
+         && printf '%s  %s\n' "$$NGINX_RELEASE_SHA256" /tmp/nginx.tar.gz | sha256sum -c - \
+         && mkdir /out && tar -xzf /tmp/nginx.tar.gz -C /out \
+         && test -x /out/usr/sbin/nginx && test ! -e /out/usr/sbin/shibd
         FROM nginx:1.30.5
         RUN rm /usr/sbin/nginx-debug
-        COPY --from=nginx-artifacts /usr/sbin/nginx /usr/sbin/nginx
-        COPY --from=nginx-artifacts /etc/nginx/ /etc/nginx/
-        COPY --from=nginx-artifacts /licenses/ /usr/share/doc/nginx-shib/licenses/
+        COPY --from=nginx-release --chown=0:0 /out/usr/sbin/nginx /usr/sbin/nginx
+        COPY --from=nginx-release --chown=0:0 /out/etc/nginx/ /etc/nginx/
+        COPY --from=nginx-release --chown=0:0 /out/licenses/ /usr/share/doc/nginx-shib/licenses/
         COPY . /etc/nginx/
-      additional_contexts:
-        nginx-artifacts: service:nginx-compiler
-    # Always use the pinned source build, rather than a stale registry image.
+      secrets:
+        - github_token
+    # Always package the pinned release, rather than pulling a stale registry image.
     pull_policy: build
     ports:
       - 80:80
@@ -76,3 +80,7 @@ services:
 
 volumes:
   logs:
+
+secrets:
+  github_token:
+    environment: GH_TOKEN

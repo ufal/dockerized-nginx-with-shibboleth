@@ -4,37 +4,53 @@
 - nginx with shibboleth module
 - default config connects the two
 
-For a source build, nginx uses the private `dataquest-dev/docker-nginx-shib-auth` Git submodule at
-`nginx/image`. You need read access to that repository. Initialize it before building:
+The nginx Docker build downloads the precompiled Ubuntu 22.04 / amd64 binary from
+the private `dataquest-dev/docker-nginx-shib-auth` release
+[`ubuntu-22.04-amd64-nginx-1.30.5-r1`](https://github.com/dataquest-dev/docker-nginx-shib-auth/releases/tag/ubuntu-22.04-amd64-nginx-1.30.5-r1).
+The release asset ID and SHA-256 digest are pinned in Compose. Docker verifies the
+archive before installing its binary, FastCGI includes and licenses.
+
+Authenticate GitHub CLI with read access to that repository, and pass its token
+as a Docker build secret. On Linux:
 
 ```sh
-git submodule update --init --recursive
+export GH_TOKEN="$(gh auth token)"
 docker compose up --build
 ```
 
-Docker is required for compilation. Compose builds the submodule's `Dockerfile.shib`,
-target `nginx-artifacts`, to compile nginx 1.30.5 (latest stable) with Shibboleth, headers-more and echo.
-The `nginx-compiler` service is a build dependency with zero replicas; it starts no container.
-The artifact image supplies the binary, FastCGI includes and licenses, without compiling SP.
-The shared repository's pre-existing container/deployment tools are retained.
-This project's inline Compose build packages the binary in the official nginx 1.30.5 image,
-retaining its standard entrypoint and template handling. Compilation uses Ubuntu 22.04;
-the binary needs compatible Linux libraries. Project snippets/templates are baked into this
-consumer image and can be overridden with bind mounts. No separate nginx Dockerfile is needed.
-The SP remains the separate `shibboleth` service at ports 12344/12345 and builds SP 3.6.0.
-nginx versions/checksums are pinned in the submodule's `Dockerfile.shib`; update its revision and
-the official image version in Compose together after testing upgrades.
-Compose 2.17 or newer with BuildKit is required for inline builds and additional contexts.
-Merge the shared compiler PR first. If it is squash-merged or rebased, update
-`nginx/image` to the resulting commit on the shared repository's `main` before
-merging this consumer PR; its review-time pin references the compiler PR branch.
+On PowerShell:
+
+```powershell
+$env:GH_TOKEN = gh auth token
+docker compose up --build
+```
+
+The token is mounted only in the download build step. It is not a Docker build
+argument or container environment variable. A fine-grained token needs read access
+to that repository's contents. Credentials are required when building the image;
+the resulting image contains the release files and this project's configuration.
+
+Docker is required. This project packages the downloaded nginx 1.30.5 binary in the
+official nginx 1.30.5 image, retaining its standard entrypoint and template handling.
+The service targets `linux/amd64`; the release's Ubuntu 22.04 binary works with the
+compatible libraries in that image. Project snippets/templates are baked into the
+consumer image and can be overridden with bind mounts. No separate nginx Dockerfile
+or nginx compiler service is needed. SP remains the separate `shibboleth` service at
+ports 12344/12345 and builds SP 3.6.0.
+
+The `nginx/image` Git submodule is retained for source inspection and pinned to the
+release's source commit on `ubuntu-22.04-amd64`. It is not required to build nginx's
+consumer image. Initialize it with `git submodule update --init --recursive` when
+inspecting the compiler. For upgrades, publish an upstream release and update its
+asset ID/digest, the official nginx version and the submodule pin together after testing.
+Compose 2.17 or newer with BuildKit is required for inline builds and build secrets.
 There is no automatic image publishing or deployment workflow. Building creates local images;
 registry uploads are a separate operator action.
-Both built services use local image names and `pull_policy: build`, so normal startup uses
-the pinned sources instead of pulling an older registry tag.
+Both built services use local image names and `pull_policy: build`, so normal startup
+builds from the pinned release and SP sources.
 
 ## additional configs for nginx
-Nginx is built from source in the shared submodule. Project snippets (`proxy_params`, `shibboleth_auth`,
+Nginx is installed from the pinned upstream release. Project snippets (`proxy_params`, `shibboleth_auth`,
 `ssl_params`, `cors_headers`) are mounted read-only at their original `/etc/nginx` paths; templates
 are rendered from `/etc/nginx/templates` to `/etc/nginx/conf.d`.
 `NGINX_ENVSUBST_FILTER=^NGINX_` preserves nginx's own variables. Modules are compiled in, so
@@ -144,6 +160,7 @@ see https://github.com/ufal/dockerized-nginx-with-shibboleth/wiki/casestudy
 ## Integration verification
 
 ```sh
+export GH_TOKEN="$(gh auth token)"
 docker compose build nginx shibboleth
 docker tag local/dspace-nginx-shib:1.30.5 local/nginx-shib-review:latest
 docker tag local/dspace-shibboleth:3.6.0 local/shibboleth-review:latest

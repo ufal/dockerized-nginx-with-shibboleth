@@ -3,7 +3,7 @@
 Reviewed on 2026-10-12 against shared baseline
 `dataquest-dev/docker-nginx-shib-auth@3d147b5e53750937c1e53a69470cf44845e7b208`
 and the consuming project's Compose, nginx configuration and SP build/startup.
-Updated on 2026-10-13 for Tomas's review of the compiler PR.
+Updated on 2026-10-13 for Tomas's review and release-based consumption.
 
 ## Final scope
 
@@ -14,21 +14,24 @@ Source versions and checksums remain Dockerfile build arguments, read by the exi
 menu. No native build script or separate version file is added. Existing runtime
 examples, launchers and deployment tools are preserved.
 
-The consumer builds that Docker target from its pinned Git submodule. A zero-replica
-Compose build dependency supplies artifacts to the consumer's inline packaging build.
-The runtime uses the official nginx image, retains its entrypoint and bakes this
-project's configuration. The compiler image is never started as a service.
+The consumer downloads the precompiled `ubuntu-22.04-amd64-nginx-1.30.5-r1` release
+in its inline Docker build. Compose pins asset ID `638077019` and the archive's
+SHA-256 digest. A temporary BuildKit secret authenticates to the private repository.
+The source submodule pins the release commit `5974ce8` for inspection; it is not
+part of the consumer build. The runtime uses the official nginx image, retains
+its entrypoint and bakes this project's configuration.
 The consumer's existing Shibboleth SP stays separate and uses TCP FastCGI.
 There is no separate parent nginx Dockerfile and no automated registry publishing.
 The shared CI compiles nginx with the three static modules using Docker, then retains
-a compressed binary artifact and checksum for 30 days. The artifact excludes SP.
-It does not publish images or deploy services.
+a compressed binary artifact and checksum for 30 days. Manual release requests
+also publish that bundle as GitHub Release assets. The bundle excludes SP.
+There is no image publishing or deployment.
 
 ## Findings resolved
 
 | Priority | Finding | Final resolution |
 |---|---|---|
-| P1 | Original shared image starts its own SP with Unix sockets, while this project already owns a separate TCP SP. | Consumer builds the nginx-only artifact target and retains its own SP. The default shared standalone build remains available to existing launchers. |
+| P1 | Original shared image starts its own SP with Unix sockets, while this project already owns a separate TCP SP. | Consumer installs the nginx-only binary release and retains its own SP. The default shared standalone build remains available to existing launchers. |
 | P1 | Consumer needs template interpolation and the `main` log format. | Keep the official nginx image's entrypoint and base configuration in the consumer; bake project snippets/templates there. |
 | P1 | Consumer discovery JSONP uses echo; former dynamic module loaders cannot load statically linked modules. | Compile echo 0.63, headers-more 0.40 and nginx-http-shibboleth 2.0.2 in; remove the old nginx Dockerfile/module loader. |
 | P1 | Consumer's SP 3.5.2 download from a mutable `latest` path returns 404 and build errors were ignored. | Compile SP 3.6.0 from pinned HTTPS source URLs with SHA-256 verification and explicit dependencies. |

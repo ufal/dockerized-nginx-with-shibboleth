@@ -166,6 +166,8 @@ def main():
                   for kind in ("networks", "volumes") for resource in config.get(kind, {}).values()),
               "Compose networks and volumes use the random test project name")
         config.pop("name", None)
+        # Authentication is needed only while downloading the release at build time.
+        config.pop("secrets", None)
         nginx = config["services"]["nginx"]
         nginx.pop("build", None)
         nginx.pop("pull_policy", None)
@@ -213,8 +215,6 @@ def main():
         cookie = ""
         try:
             run(*compose, "up", "-d", "--no-build", "--pull", "never")
-            if "nginx-compiler" in run(*compose, "ps", "--status", "running", "--services").splitlines():
-                raise AssertionError("The compiler must remain a build dependency with zero containers")
             port = int(run(*compose, "port", "nginx", "443").rsplit(":", 1)[1])
 
             def request(path, method="GET", body=None, headers=None, use_cookie=True):
