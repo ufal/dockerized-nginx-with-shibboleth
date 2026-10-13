@@ -245,8 +245,8 @@ def main():
             check('supportContact="support@example.test"' in rendered_sp,
                   "existing SP templates interpolate custom environment variables")
             run(*compose, "exec", "-T", "nginx", "nginx", "-t")
-            check("nginx/1.31.6" in run(*compose, "exec", "-T", "nginx", "bash", "-c", "nginx -v 2>&1"),
-                  "latest mainline nginx 1.31.6 is running")
+            check("nginx/1.30.5" in run(*compose, "exec", "-T", "nginx", "bash", "-c", "nginx -v 2>&1"),
+                  "latest stable nginx 1.30.5 is running")
             check(json.loads(request("/server/api/core/items")[1])["path"] == "/server/api/core/items",
                   "DSpace backend path is preserved")
             check(json.loads(request("/ui-route")[1])["path"] == "/ui-route", "frontend proxy works")

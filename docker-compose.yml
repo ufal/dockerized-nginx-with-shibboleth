@@ -2,7 +2,7 @@ services:
   nginx-compiler:
     # Build dependency only: zero containers are started for this artifact image.
     scale: 0
-    image: local/dspace-nginx-artifacts:1.31.6
+    image: local/dspace-nginx-artifacts:1.30.5
     pull_policy: build
     build:
       context: ./nginx/image
@@ -10,13 +10,13 @@ services:
       target: nginx-artifacts
 
   nginx:
-    image: local/dspace-nginx-shib:1.31.6
+    image: local/dspace-nginx-shib:1.30.5
     restart: unless-stopped
     build:
       context: ./nginx/conf
       # Runtime packaging belongs here; compilation belongs to the submodule.
       dockerfile_inline: |
-        FROM nginx:1.31.6
+        FROM nginx:1.30.5
         RUN rm /usr/sbin/nginx-debug
         COPY --from=nginx-artifacts /usr/sbin/nginx /usr/sbin/nginx
         COPY --from=nginx-artifacts /etc/nginx/ /etc/nginx/

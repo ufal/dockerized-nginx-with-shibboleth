@@ -13,11 +13,11 @@ docker compose up --build
 ```
 
 Docker is required for compilation. Compose builds the submodule's `Dockerfile.shib`,
-target `nginx-artifacts`, to compile nginx 1.31.6 with Shibboleth, headers-more and echo.
+target `nginx-artifacts`, to compile nginx 1.30.5 (latest stable) with Shibboleth, headers-more and echo.
 The `nginx-compiler` service is a build dependency with zero replicas; it starts no container.
 The artifact image supplies the binary, FastCGI includes and licenses, without compiling SP.
 The shared repository's pre-existing container/deployment tools are retained.
-This project's inline Compose build packages the binary in the official nginx 1.31.6 image,
+This project's inline Compose build packages the binary in the official nginx 1.30.5 image,
 retaining its standard entrypoint and template handling. Compilation uses Ubuntu 22.04;
 the binary needs compatible Linux libraries. Project snippets/templates are baked into this
 consumer image and can be overridden with bind mounts. No separate nginx Dockerfile is needed.
@@ -25,6 +25,9 @@ The SP remains the separate `shibboleth` service at ports 12344/12345 and builds
 nginx versions/checksums are pinned in the submodule's `Dockerfile.shib`; update its revision and
 the official image version in Compose together after testing upgrades.
 Compose 2.17 or newer with BuildKit is required for inline builds and additional contexts.
+Merge the shared compiler PR first. If it is squash-merged or rebased, update
+`nginx/image` to the resulting commit on the shared repository's `main` before
+merging this consumer PR; its review-time pin references the compiler PR branch.
 There is no automatic image publishing or deployment workflow. Building creates local images;
 registry uploads are a separate operator action.
 Both built services use local image names and `pull_policy: build`, so normal startup uses
@@ -35,7 +38,12 @@ Nginx is built from source in the shared submodule. Project snippets (`proxy_par
 `ssl_params`, `cors_headers`) are mounted read-only at their original `/etc/nginx` paths; templates
 are rendered from `/etc/nginx/templates` to `/etc/nginx/conf.d`.
 `NGINX_ENVSUBST_FILTER=^NGINX_` preserves nginx's own variables. Modules are compiled in, so
-additional configuration must not attempt to load the former dynamic `.so` modules. Additionally:
+additional configuration must not attempt to load the former dynamic `.so` modules.
+This binary enables nginx's default modules, SSL, Shibboleth, headers-more and echo.
+It replaces the official image's broader binary: HTTP/2, HTTP/3, realip, auth_request,
+gzip_static, stub_status, sub, stream, mail, threads and the official compiler
+hardening flags are not enabled. Check `nginx -V` and `nginx -t` before adding
+directives in `nginx/locations/`. Additionally:
  
 - default.conf has a `include /etc/nginx/locations/*;` and docker-compose has a bind mount for that dir. This can be used to configure addtional locations
 - it's expected that `/ssl` bind mounted by docker compose from `./nginx/ssl` contains the following files:
@@ -137,7 +145,7 @@ see https://github.com/ufal/dockerized-nginx-with-shibboleth/wiki/casestudy
 
 ```sh
 docker compose build nginx shibboleth
-docker tag local/dspace-nginx-shib:1.31.6 local/nginx-shib-review:latest
+docker tag local/dspace-nginx-shib:1.30.5 local/nginx-shib-review:latest
 docker tag local/dspace-shibboleth:3.6.0 local/shibboleth-review:latest
 docker pull python:3.11-slim
 docker compose pull syslog

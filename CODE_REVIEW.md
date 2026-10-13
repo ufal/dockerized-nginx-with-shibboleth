@@ -3,6 +3,7 @@
 Reviewed on 2026-10-12 against shared baseline
 `dataquest-dev/docker-nginx-shib-auth@3d147b5e53750937c1e53a69470cf44845e7b208`
 and the consuming project's Compose, nginx configuration and SP build/startup.
+Updated on 2026-10-13 for Tomas's review of the compiler PR.
 
 ## Final scope
 
@@ -31,7 +32,10 @@ It does not publish images or deploy services.
 | P1 | Consumer needs template interpolation and the `main` log format. | Keep the official nginx image's entrypoint and base configuration in the consumer; bake project snippets/templates there. |
 | P1 | Consumer discovery JSONP uses echo; former dynamic module loaders cannot load statically linked modules. | Compile echo 0.63, headers-more 0.40 and nginx-http-shibboleth 2.0.2 in; remove the old nginx Dockerfile/module loader. |
 | P1 | Consumer's SP 3.5.2 download from a mutable `latest` path returns 404 and build errors were ignored. | Compile SP 3.6.0 from pinned HTTPS source URLs with SHA-256 verification and explicit dependencies. |
-| P2 | Default nginx version was stable rather than the newest requested release. | Pin nginx 1.31.6, confirmed latest mainline at nginx.org on the review date. |
+| P2 | Mainline nginx did not match the latest stable requirement clarified in review. | Pin nginx 1.30.5, confirmed latest stable at nginx.org on 2026-10-13. |
+| P1 | Standalone nginx could not create temporary directories under the missing /var/cache/nginx parent. | Create that directory in the nginx build output; CI builds the standalone image and runs nginx -t. |
+| P2 | nginx upgrades invalidated the standalone SP compilation cache. | Compile nginx and SP in independent stages and combine their outputs only in the final image. |
+| P2 | Replacing the official nginx binary reduces the module set. | Document enabled modules and omitted optional modules/compiler hardening in both READMEs; extension configurations must use the compiled set. |
 | P2 | Consumer suppresses key-generation errors and can start with incomplete persisted SP key pairs. | Reuse complete pairs, generate wholly absent pairs, reject incomplete pairs and validate SP configuration before starting supervisor. |
 | P2 | Default SP debug tracing logs complete SAML identity messages. | Default message/security logging to INFO. |
 | P2 | Runtime image library compatibility is required for a reusable dynamically linked binary. | Compile on Ubuntu 22.04, document compatible Linux libraries and verify the resulting binary in the consumer's official nginx runtime. |
@@ -41,7 +45,7 @@ use LF. Existing production certificates, SP keys and overrides were unchanged.
 
 ## Validation
 
-- Docker artifact target builds nginx 1.31.6 on Ubuntu 22.04, checking all four
+- Docker artifact target builds nginx 1.30.5 on Ubuntu 22.04, checking all four
   source archives. Only SSL and the three required
   third-party modules are explicitly enabled; unrelated nginx features were removed.
 - Consumer image inherits `/docker-entrypoint.sh` from the official nginx image.
@@ -57,6 +61,8 @@ use LF. Existing production certificates, SP keys and overrides were unchanged.
 - The integration test also runs without nginx configuration bind mounts to
   verify the consumer image's baked defaults. All 20 checks pass in each mode
   (40 integration checks total).
+- The stable nginx build also passes 20 checks against an external Ubuntu 22.04
+  SP 3.3.0 package fixture, including signed SAML sessions and baked configuration.
 
 Integration commands are in README.md. Tests use isolated project/network/volume
 names and random loopback ports, and clean up their generated resources.
