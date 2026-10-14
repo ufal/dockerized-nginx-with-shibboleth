@@ -52,6 +52,6 @@ echo "Processing xinclude in shibboleth2.xml"
 xmllint --xinclude --output shibboleth2.xml shibboleth2.xml
 
 # Validate before supervisor starts endlessly restarting broken services.
-/opt/shibboleth-sp/sbin/shibd -t
+/usr/sbin/shibd -t
 
 exec "$@"

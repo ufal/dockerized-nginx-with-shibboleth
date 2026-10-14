@@ -4,11 +4,12 @@
 - nginx with shibboleth module
 - default config connects the two
 
-The nginx Docker build downloads the precompiled Ubuntu 22.04 / amd64 binary from
-the private `dataquest-dev/docker-nginx-shib-auth` release
-[`ubuntu-22.04-amd64-nginx-1.30.5-r1`](https://github.com/dataquest-dev/docker-nginx-shib-auth/releases/tag/ubuntu-22.04-amd64-nginx-1.30.5-r1).
-The release asset ID and SHA-256 digest are pinned in Compose. Docker verifies the
-archive before installing its binary, FastCGI includes and licenses.
+The nginx and Shibboleth SP Docker builds download precompiled Ubuntu 22.04 / amd64
+binaries from the private `dataquest-dev/docker-nginx-shib-auth` release
+[`ubuntu-22.04-amd64-nginx-1.30.5-r2`](https://github.com/dataquest-dev/docker-nginx-shib-auth/releases/tag/ubuntu-22.04-amd64-nginx-1.30.5-r2):
+nginx 1.30.5 and Shibboleth SP 3.6.0 built with FastCGI (`shibd`, `shibauthorizer`,
+`shibresponder`). Release asset IDs and SHA-256 digests are pinned in Compose (nginx)
+and `shibboleth/Dockerfile` (SP). Docker verifies each archive before installing it.
 
 Authenticate GitHub CLI with read access to that repository, and pass its token
 as a Docker build secret. On Linux:
@@ -36,18 +37,23 @@ The service targets `linux/amd64`; the release's Ubuntu 22.04 binary works with 
 compatible libraries in that image. Project snippets/templates are baked into the
 consumer image and can be overridden with bind mounts. No separate nginx Dockerfile
 or nginx compiler service is needed. SP remains the separate `shibboleth` service at
-ports 12344/12345 and builds SP 3.6.0.
+ports 12344/12345. Its Ubuntu 22.04 image installs the released SP with Ubuntu's
+runtime libraries instead of compiling it. The release installs SP under `/usr`,
+`/etc/shibboleth` and `/var`; the image keeps SP configuration, logs, cache and runtime
+files at their former `/opt/shibboleth-sp/{etc,var}` paths, with `/etc/shibboleth` and
+`/var/{log,cache,run}/shibboleth` linking there. Overrides, absolute `/opt/shibboleth-sp`
+paths in configuration and the logs volume therefore keep working.
 
 The `nginx/image` Git submodule is retained for source inspection and pinned to the
 release's source commit on `ubuntu-22.04-amd64`. It is not required to build nginx's
 consumer image. Initialize it with `git submodule update --init --recursive` when
 inspecting the compiler. For upgrades, publish an upstream release and update its
-asset ID/digest, the official nginx version and the submodule pin together after testing.
+asset IDs/digests, the official nginx version and the submodule pin together after testing.
 Compose 2.17 or newer with BuildKit is required for inline builds and build secrets.
 There is no automatic image publishing or deployment workflow. Building creates local images;
 registry uploads are a separate operator action.
 Both built services use local image names and `pull_policy: build`, so normal startup
-builds from the pinned release and SP sources.
+builds from the pinned release assets.
 
 ## additional configs for nginx
 Nginx is installed from the pinned upstream release. Project snippets (`proxy_params`, `shibboleth_auth`,

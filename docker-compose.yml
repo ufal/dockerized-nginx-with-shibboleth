@@ -9,7 +9,7 @@ services:
       dockerfile_inline: |
         FROM ubuntu:22.04 AS nginx-release
         RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl
-        ARG NGINX_RELEASE_ASSET_ID=638077019
+        ARG NGINX_RELEASE_ASSET_ID=640181284
         ARG NGINX_RELEASE_SHA256=ce86499c6587fe5048f0fe5b85f69c009d2d941da3a2b47044ca12d2841dddc4
         RUN --mount=type=secret,id=github_token,required=true \
             curl -fsSL --retry 3 \
@@ -59,7 +59,12 @@ services:
   shibboleth:
     image: local/dspace-shibboleth:3.6.0
     restart: unless-stopped
-    build: ./shibboleth
+    platform: linux/amd64
+    build:
+      # Installs the pinned upstream SP release (asset ID/SHA-256 in shibboleth/Dockerfile).
+      context: ./shibboleth
+      secrets:
+        - github_token
     pull_policy: build
     volumes:
     # config (+key material), logs
