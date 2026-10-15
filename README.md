@@ -10,7 +10,7 @@ pinned in `nginx/Dockerfile` and checked before installation. Pass a GitHub toke
 read access to that repository as a build secret; it is used only for the download and
 is not stored in the image. Compose 2.17 or newer with BuildKit is required.
 The shibboleth build likewise downloads Shibboleth SP 3.6.0 built with FastCGI from that
-repository's release (asset ID and SHA-256 pinned in `shibboleth/Dockerfile`) instead of
+repository's release (release tag, asset name and SHA-256 pinned in `shibboleth/Dockerfile`) instead of
 compiling it, and installs Ubuntu 22.04's runtime libraries for it.
 
 ```

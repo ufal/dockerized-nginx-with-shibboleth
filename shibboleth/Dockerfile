@@ -1,14 +1,17 @@
 FROM debian:bookworm-slim
 
-ARG SP_RELEASE_ASSET_ID=640181282
+ARG SP_RELEASE=ubuntu-22.04-amd64-nginx-1.30.5-r2
+ARG SP_ASSET=shibboleth-sp-3.6.0-fastcgi-ubuntu-22.04-amd64.tar.gz
 ARG SP_RELEASE_SHA256=63c20a76198a77a3b75df296f5377b31424063db840ffc63965d2886ffcde27b
-RUN --mount=type=secret,id=github_token,required=true <<EOF
+RUN --mount=type=secret,id=github_token,required=true <<'EOF'
+set -e
 apt-get update
-apt-get install -y ca-certificates curl
-curl -fsSL -o /tmp/sp.tar.gz \
-  -H "Authorization: Bearer $(cat /run/secrets/github_token)" \
-  -H "Accept: application/octet-stream" \
-  "https://api.github.com/repos/dataquest-dev/docker-nginx-shib-auth/releases/assets/$SP_RELEASE_ASSET_ID"
+apt-get install -y ca-certificates curl jq
+api=https://api.github.com/repos/dataquest-dev/docker-nginx-shib-auth
+auth="Authorization: Bearer $(cat /run/secrets/github_token)"
+url=$(curl -fsSL -H "$auth" "$api/releases/tags/$SP_RELEASE" \
+  | jq -er --arg name "$SP_ASSET" '.assets[] | select(.name == $name) | .url')
+curl -fsSL -o /tmp/sp.tar.gz -H "$auth" -H "Accept: application/octet-stream" "$url"
 echo "$SP_RELEASE_SHA256  /tmp/sp.tar.gz" | sha256sum -c -
 mkdir /out && tar -xzf /tmp/sp.tar.gz -C /out
 EOF
