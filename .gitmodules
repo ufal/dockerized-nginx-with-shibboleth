@@ -1,4 +1,0 @@
-[submodule "nginx/image"]
-	path = nginx/image
-	url = https://github.com/dataquest-dev/docker-nginx-shib-auth.git
-	branch = ubuntu-22.04-amd64

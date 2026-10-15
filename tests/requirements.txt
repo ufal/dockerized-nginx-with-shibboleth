@@ -1,2 +1,0 @@
-lxml>=5,<7
-cryptography>=43,<47
