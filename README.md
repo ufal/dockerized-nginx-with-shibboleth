@@ -5,7 +5,7 @@
 - default config connects the two
 
 The nginx build downloads a precompiled nginx 1.30.5 (linux/amd64) from a release of the
-private `dataquest-dev/docker-nginx-shib-auth` repository. Its asset ID and SHA-256 are
+private `dataquest-dev/docker-nginx-shib-auth` repository. Its release tag, asset name and SHA-256 are
 pinned in `nginx/Dockerfile` and checked before installation. Pass a GitHub token with
 read access to that repository as a build secret; it is used only for the download and
 is not stored in the image. Compose 2.17 or newer with BuildKit is required.
