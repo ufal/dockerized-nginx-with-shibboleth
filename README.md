@@ -4,68 +4,25 @@
 - nginx with shibboleth module
 - default config connects the two
 
-The nginx and Shibboleth SP Docker builds download precompiled Ubuntu 22.04 / amd64
-binaries from the private `dataquest-dev/docker-nginx-shib-auth` release
-[`ubuntu-22.04-amd64-nginx-1.30.5-r2`](https://github.com/dataquest-dev/docker-nginx-shib-auth/releases/tag/ubuntu-22.04-amd64-nginx-1.30.5-r2):
-nginx 1.30.5 and Shibboleth SP 3.6.0 built with FastCGI (`shibd`, `shibauthorizer`,
-`shibresponder`). Release asset IDs and SHA-256 digests are pinned in Compose (nginx)
-and `shibboleth/Dockerfile` (SP). Docker verifies each archive before installing it.
+The nginx build downloads a precompiled nginx 1.30.5 (linux/amd64) from a release of the
+private `dataquest-dev/docker-nginx-shib-auth` repository. Its asset ID and SHA-256 are
+pinned in `nginx/Dockerfile` and checked before installation. Pass a GitHub token with
+read access to that repository as a build secret; it is used only for the download and
+is not stored in the image. Compose 2.17 or newer with BuildKit is required.
+The shibboleth build likewise downloads Shibboleth SP 3.6.0 built with FastCGI from that
+repository's release (asset ID and SHA-256 pinned in `shibboleth/Dockerfile`) instead of
+compiling it, and installs Ubuntu 22.04's runtime libraries for it.
 
-Authenticate GitHub CLI with read access to that repository, and pass its token
-as a Docker build secret. On Linux:
-
-```sh
+```
 export GH_TOKEN="$(gh auth token)"
-docker compose up --build
+docker compose up
 ```
-
-On PowerShell:
-
-```powershell
-$env:GH_TOKEN = gh auth token
-docker compose up --build
-```
-
-The token is mounted only in the download build step. It is not a Docker build
-argument or container environment variable. A fine-grained token needs read access
-to that repository's contents. Credentials are required when building the image;
-the resulting image contains the release files and this project's configuration.
-
-Docker is required. This project packages the downloaded nginx 1.30.5 binary in the
-official nginx 1.30.5 image, retaining its standard entrypoint and template handling.
-The service targets `linux/amd64`; the release's Ubuntu 22.04 binary works with the
-compatible libraries in that image. Project snippets/templates are baked into the
-consumer image and can be overridden with bind mounts. No separate nginx Dockerfile
-or nginx compiler service is needed. SP remains the separate `shibboleth` service at
-ports 12344/12345. Its Ubuntu 22.04 image installs the released SP with Ubuntu's
-runtime libraries instead of compiling it. The release installs SP under `/usr`,
-`/etc/shibboleth` and `/var`; the image keeps SP configuration, logs, cache and runtime
-files at their former `/opt/shibboleth-sp/{etc,var}` paths, with `/etc/shibboleth` and
-`/var/{log,cache,run}/shibboleth` linking there. Overrides, absolute `/opt/shibboleth-sp`
-paths in configuration and the logs volume therefore keep working.
-
-The `nginx/image` Git submodule is retained for source inspection and pinned to the
-release's source commit on `ubuntu-22.04-amd64`. It is not required to build nginx's
-consumer image. Initialize it with `git submodule update --init --recursive` when
-inspecting the compiler. For upgrades, publish an upstream release and update its
-asset IDs/digests, the official nginx version and the submodule pin together after testing.
-Compose 2.17 or newer with BuildKit is required for inline builds and build secrets.
-There is no automatic image publishing or deployment workflow. Building creates local images;
-registry uploads are a separate operator action.
-Both built services use local image names and `pull_policy: build`, so normal startup
-builds from the pinned release assets.
 
 ## additional configs for nginx
-Nginx is installed from the pinned upstream release. Project snippets (`proxy_params`, `shibboleth_auth`,
-`ssl_params`, `cors_headers`) are mounted read-only at their original `/etc/nginx` paths; templates
-are rendered from `/etc/nginx/templates` to `/etc/nginx/conf.d`.
-`NGINX_ENVSUBST_FILTER=^NGINX_` preserves nginx's own variables. Modules are compiled in, so
-additional configuration must not attempt to load the former dynamic `.so` modules.
-This binary enables nginx's default modules, SSL, Shibboleth, headers-more and echo.
-It replaces the official image's broader binary: HTTP/2, HTTP/3, realip, auth_request,
-gzip_static, stub_status, sub, stream, mail, threads and the official compiler
-hardening flags are not enabled. Check `nginx -V` and `nginx -t` before adding
-directives in `nginx/locations/`. Additionally:
+Nginx is built on top of official docker image, with its binary replaced by the release
+build. The shibboleth, headers-more and echo modules are compiled in, so configuration
+must not load them as dynamic modules; other official-image modules such as HTTP/2,
+realip or auth_request are not available. Additionally:
  
 - default.conf has a `include /etc/nginx/locations/*;` and docker-compose has a bind mount for that dir. This can be used to configure addtional locations
 - it's expected that `/ssl` bind mounted by docker compose from `./nginx/ssl` contains the following files:
@@ -121,8 +78,6 @@ The shibboleth image (its entrypoint) has some similar mechanisms to what nginx 
 Shibboleth (shibd, authorizer and responder) are run via supervisord. Supervisors logs go to stdout/stderr. Shibd logs end up in logs volume.
 
 You must set `SHIB_HOSTNAME` (in an .env file or some other way). By default this is used in the entityId and in the RequestMapper.
-Keep the existing signing/encryption key pairs in `shibboleth/sp-keys`. Startup reuses complete
-pairs and fails on an incomplete pair; it generates keys only when both files of a pair are absent.
 
 Example of the overrides dir:
 ```
@@ -162,25 +117,3 @@ configures 2 metadata sources
 # Case study - local testing
 
 see https://github.com/ufal/dockerized-nginx-with-shibboleth/wiki/casestudy
-
-## Integration verification
-
-```sh
-export GH_TOKEN="$(gh auth token)"
-docker compose build nginx shibboleth
-docker tag local/dspace-nginx-shib:1.30.5 local/nginx-shib-review:latest
-docker tag local/dspace-shibboleth:3.6.0 local/shibboleth-review:latest
-docker pull python:3.11-slim
-docker compose pull syslog
-python -m pip install -r tests/requirements.txt
-python tests/integration.py
-python tests/integration.py --image-only
-```
-
-The test starts an isolated Compose project with temporary TLS/SP/IdP keys and random loopback
-ports, and removes its containers and volumes afterwards. It uses this project's actual nginx
-templates, Shibboleth FastCGI service and Fluent Bit collector, an HTTP fixture for the DSpace
-backend/frontend, and a locally signed SAML assertion. It checks metadata, discovery JSONP,
-redirects, attribute forwarding, logging, header spoofing, replay rejection and SP key preservation.
-The second run verifies the baked image without nginx configuration bind mounts. It does not test a production federation
-or DSpace's own authentication code. Review details and validation results are in `CODE_REVIEW.md`.

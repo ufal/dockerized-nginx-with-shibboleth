@@ -13,7 +13,7 @@ log4j.category.Shibboleth.PropertySet=WARN
 # interprocess message remoting
 #log4j.category.Shibboleth.Listener=DEBUG
 # mapping of requests to applicationId
-log4j.category.Shibboleth.RequestMapper=INFO
+log4j.category.Shibboleth.RequestMapper=DEBUG
 # high level session cache operations
 #log4j.category.Shibboleth.SessionCache=DEBUG
 
