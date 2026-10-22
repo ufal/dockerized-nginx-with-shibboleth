@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - 'main'
+  # build (but don't push) on PRs so changes can be checked before merging
+  pull_request:
 
 jobs:
   docker:
@@ -16,6 +18,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
       -
         name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -25,8 +28,8 @@ jobs:
         name: Build and push nginx
         uses: docker/build-push-action@v5
         with:
-          context: "{{defaultContext}}:nginx"          
-          push: true
+          context: "{{defaultContext}}:nginx"
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ghcr.io/ufal/dockerized-nginx-with-shibboleth/nginx-shib:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -35,7 +38,16 @@ jobs:
         uses: docker/build-push-action@v5
         with:
             context: "{{defaultContext}}:shibboleth"
-            push: true
+            push: ${{ github.event_name != 'pull_request' }}
+            load: ${{ github.event_name == 'pull_request' }}
             tags: ghcr.io/ufal/dockerized-nginx-with-shibboleth/shibboleth:latest
             cache-from: type=gha
             cache-to: type=gha,mode=max
+      -
+        name: Check shibboleth runtime libraries
+        if: github.event_name == 'pull_request'
+        run: |
+          docker run --rm --entrypoint /opt/shibboleth-sp/sbin/shibd ghcr.io/ufal/dockerized-nginx-with-shibboleth/shibboleth:latest -v
+          missing=$(docker run --rm --entrypoint sh ghcr.io/ufal/dockerized-nginx-with-shibboleth/shibboleth:latest -c \
+            'ldd /opt/shibboleth-sp/sbin/shibd /opt/shibboleth-sp/lib/shibboleth/* /opt/shibboleth-sp/lib/*.so* 2>/dev/null | grep "not found"' || true)
+          if [ -n "$missing" ]; then echo "$missing"; exit 1; fi
