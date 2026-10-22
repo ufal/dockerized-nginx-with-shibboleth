@@ -1,6 +1,6 @@
 #!/bin/bash
 # https://github.com/ufal/lindat-dspace/wiki/Building-Shibboleth-with-FastCGI-support
-# ensure the versions are still latest
+# when bumping, check upstream for newer versions of every component
 
 apt-get install libfcgi-dev libboost-all-dev openssl libssl-dev pkg-config libcurl4-openssl-dev
 
@@ -21,12 +21,12 @@ function get {
   fi
 }
 
-get log4shib 2.0.1 http://shibboleth.net/downloads/log4shib/latest/
-get xerces-c 3.3.0 http://mirror.hosting90.cz/apache/xerces/c/3/sources/
+get log4shib 2.0.1 https://shibboleth.net/downloads/log4shib/2.0.1/
+get xerces-c 3.3.0 https://archive.apache.org/dist/xerces/c/3/sources/
 get xml-security-c 3.0.0 https://shibboleth.net/downloads/xml-security-c/3.0.0/
-get xmltooling 3.3.0 http://shibboleth.net/downloads/c++-opensaml/latest/
-get opensaml 3.3.1 http://shibboleth.net/downloads/c++-opensaml/latest/
-get shibboleth-sp 3.5.2 http://shibboleth.net/downloads/service-provider/latest/
+get xmltooling 3.3.0 https://shibboleth.net/downloads/c++-opensaml/3.3.0/
+get opensaml 3.3.1 https://shibboleth.net/downloads/c++-opensaml/3.3.1/
+get shibboleth-sp 3.6.0 https://shibboleth.net/downloads/service-provider/3.6.0/
 
 
 function compile {

@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 COPY shibboleth_sp_with_fastcgi.sh /shibboleth_sp_with_fastcgi.sh
 
@@ -8,10 +8,10 @@ apt-get install -y wget build-essential libfcgi-dev libboost-all-dev openssl lib
 bash ./shibboleth_sp_with_fastcgi.sh
 EOF
 
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 RUN <<EOF
 apt-get update
-apt-get install -y  libfcgi openssl libssl3 libcurl4 libicu72 supervisor gettext-base libxml2-utils
+apt-get install -y  libfcgi0t64 openssl libssl3t64 libcurl4t64 libicu76 supervisor gettext-base libxml2-utils
 rm -rf /var/lib/apt/lists/*
 EOF
 COPY --from=0 /opt/shibboleth-sp /opt/shibboleth-sp
